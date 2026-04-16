@@ -1,25 +1,28 @@
 project:
   type: website
+  output-dir: _site
 
 website:
-  title: "ISSS608-VAA"
+  title: "ISSS608"
   navbar:
+    background: "#3b4d5c"
+    foreground: "#ffffff"
     left:
-    - text: "Hands-on Exercise"
-      menu:
-        - text: "Hands-on Exercise 1"
-          href: "Hands-on_Ex/Hands-on_Ex01/Hands-on_Ex01.html"
-
+      - text: "Hands-on Exercise"
+        menu:
+          - text: "Hands-on Excercises"
+            href: Hands-on_Ex/Hands-on_Ex01/Hands-on_Ex01.html
     right:
-      - href: index.qmd
-        text: Home
-      - about.qmd
+      - text: "About"
+        href: about.html
+      - icon: linkedin
+        href: https://www.linkedin.com/in/nameishaleytran/
+      - icon: github
+        href: https://github.com/HaleyTran2000
 
 format:
   html:
-    theme: morph
+    theme: cosmo
     css: styles.css
     toc: true
-
-editor: visual
-
+    toc-location: right
