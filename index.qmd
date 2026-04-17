@@ -5,29 +5,34 @@ format:
     css: styles.css
 ---
 
-<div class="welcome-section">
-
+::: welcome-section
 Hello I am Tran Thi Thanh Van, you can call me Haley.
-Welcome to **ISSS608 Visual Analytics and Applications** homepage. In this website, you will find my coursework. Materials here are based on <a href="https://isss608-ay2025-26apr.netlify.app">https://isss608-ay2025-26apr.netlify.app</a> by Prof Kam Tin Seong from SMU.
 
-</div>
+Welcome to **ISSS608 Visual Analytics and Applications** homepage.
+
+In this website, you will find my coursework. Materials here are based on <a href="https://isss608-ay2025-26apr.netlify.app">https://isss608-ay2025-26apr.netlify.app</a> by Prof Kam Tin Seong from SMU.
+:::
 
 # Hands On Exercise
 
-<div class="card-grid">
-<div class="card">
+::::::: card-grid
+:::::: card
 <a href="Hands-on_Ex/Hands-on_Ex01/Hands-on_Ex01.html">
-<div class="card-image">
-<img src="images/ex1-preview.png" alt="Exercise 1 preview">
-</div>
-<div class="card-content">
+
+::: card-image
+<img src="images/ex1-preview.png" alt="Exercise 1 preview"/>
+:::
+
+:::: card-content
 <h3>Hands-on Exercise 1 - A Layered Grammar of Graphics: ggplot2 methods</h3>
-<div class="card-footer">
-<span class="author">THI THANH VAN TRAN</span>
-<span class="date">APR 16, 2026</span>
-</div>
-</div>
+
+::: card-footer
+[THI THANH VAN TRAN]{.author} [APR 16, 2026]{.date}
+:::
+::::
+
 </a>
-</div>
-</div>
----
+::::::
+:::::::
+
+------------------------------------------------------------------------
