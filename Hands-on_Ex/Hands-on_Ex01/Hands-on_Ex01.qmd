@@ -3,7 +3,7 @@ title: "Hands-on Exercise 1"
 subtitle: "A Layered Grammar of Graphics: ggplot2 methods"
 author: "Thi Thanh Van Tran"
 date: "April 16, 2026"
-date-modified: "April 16, 2026"
+date-modified: "last-modified"
 format:
   html:
     toc: true

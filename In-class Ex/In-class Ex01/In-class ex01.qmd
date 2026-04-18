@@ -3,7 +3,7 @@ title: "In-class Exercise"
 subtitle: "Analysing Superstore dataset"
 author: "Thi Thanh Van Tran"
 date: "April 18, 2026"
-date-modified: "April 18, 2026"
+date-modified: "last-modified"
 format:
   html:
     toc: true
