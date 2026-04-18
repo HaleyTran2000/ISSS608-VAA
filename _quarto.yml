@@ -15,7 +15,7 @@ website:
       - text: "In-class Excercises"
         menu:
           - text: "In-class Excercises-1"
-            href: In-class Ex/In-class Ex01/In-class ex01.html
+            href: In_class_Ex/In_class_Ex01/In_class_ex01.html
     right:
       - text: "About"
         href: about.html
