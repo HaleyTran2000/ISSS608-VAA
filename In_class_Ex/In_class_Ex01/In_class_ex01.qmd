@@ -40,7 +40,7 @@ The code chunk below imports *Superstore.csv* into R environment by using [*read
 **Note:** Despite the .csv extension, this is actually an Excel file format.
 
 ```{r}
-superstore <- read_excel("data/Superstore.csv")
+superstore <- read_excel("data/Superstore.xls")
 ```
 
 # Data Overview
@@ -62,7 +62,7 @@ head(superstore)
 
 ```{r}
 # Summary of numerical variables
-summary(superstore[, c("Sales", "Quantity", "Discount", "Profit")])
+summary(superstore[, c("Sales", "Quantity", "Discount", "Profit", "Order Date", "Ship Date")])
 
 # Check for missing values
 colSums(is.na(superstore))

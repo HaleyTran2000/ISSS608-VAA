@@ -35,11 +35,30 @@ In this website, you will find my coursework. Materials here are based on <a hre
 ::::::
 :::::::
 
+::::::: card-grid
+:::::: card
+<a href="Hands-on_Ex/Hands-on_Ex02/Hands-on_Ex02.html">
+
+::: card-image
+<img src="images/ex2-preview.png" alt="Exercise 2 preview"/>
+:::
+
+:::: card-content
+<h3>Hands-on Exercise 2 - A Layered Grammar of Graphics: ggplot2 methods</h3>
+
+::: card-footer
+[THI THANH VAN TRAN]{.author} [APR 22, 2026]{.date}
+:::
+::::
+
+</a>
+::::::
+:::::::
 # In-class Exercise
 
 ::::::: card-grid
 :::::: card
-<a href="In_class_Ex/In_class_Ex01/In_class_ex01.html">
+<a href="In_class_Ex/In_class_Ex01/In_class_Ex01.html">
 
 ::: card-image
 <img src="images/inclass_ex1_preview.png" alt="In-class Exercise 1 preview"/>
