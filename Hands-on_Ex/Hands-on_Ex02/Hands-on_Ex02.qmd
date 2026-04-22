@@ -51,7 +51,7 @@ For extended analysis, I will also use:
 pacman::p_load(ggrepel, patchwork, 
                ggthemes, hrbrthemes,
                tidyverse, 
-               GGally, viridis, ggridges, scales)
+               GGally, viridis, ggridges, scales, gridExtra)
 ```
 
 ## Importing Data
@@ -327,7 +327,6 @@ p_fivethirtyeight <- create_themed_plot("theme_fivethirtyeight()",
 p_tufte <- create_themed_plot("theme_tufte()", theme_tufte())
 
 # Arrange in grid
-library(gridExtra)
 grid.arrange(p_minimal, p_bw, p_classic, 
              p_wsj, p_fivethirtyeight, p_tufte, 
              ncol = 3)
@@ -856,15 +855,14 @@ dashboard +
 ## Summary Statistics
 
 ```{r}
-summary_stats <- exam_data %>%
-  summarise(
-    Subject = c("Mathematics", "English", "Science"),
-    Mean = c(mean(MATHS), mean(ENGLISH), mean(SCIENCE)),
-    Median = c(median(MATHS), median(ENGLISH), median(SCIENCE)),
-    SD = c(sd(MATHS), sd(ENGLISH), sd(SCIENCE)),
-    Min = c(min(MATHS), min(ENGLISH), min(SCIENCE)),
-    Max = c(max(MATHS), max(ENGLISH), max(SCIENCE))
-  )
+summary_stats <- tibble(
+  Subject = c("Mathematics", "English", "Science"),
+  Mean = c(mean(exam_data$MATHS), mean(exam_data$ENGLISH), mean(exam_data$SCIENCE)),
+  Median = c(median(exam_data$MATHS), median(exam_data$ENGLISH), median(exam_data$SCIENCE)),
+  SD = c(sd(exam_data$MATHS), sd(exam_data$ENGLISH), sd(exam_data$SCIENCE)),
+  Min = c(min(exam_data$MATHS), min(exam_data$ENGLISH), min(exam_data$SCIENCE)),
+  Max = c(max(exam_data$MATHS), max(exam_data$ENGLISH), max(exam_data$SCIENCE))
+)
 
 knitr::kable(summary_stats, digits = 2,
              caption = "Summary Statistics by Subject")
@@ -899,20 +897,20 @@ knitr::kable(summary_stats, digits = 2,
 
 Throughout this exercise, I have successfully demonstrated:
 
-✅ **ggrepel Skills:**
+**ggrepel Skills:**
 
 -   Preventing overlapping text labels with `geom_label_repel()`
 -   Implementing conditional labeling strategies
 -   Customizing label appearance and positioning
 
-✅ **Theme Skills:**
+**Theme Skills:**
 
 -   Applying built-in ggplot2 themes
 -   Using professional themes from ggthemes package
 -   Customizing hrbrthemes for typography-focused designs
 -   Comparing different theme aesthetics
 
-✅ **Patchwork Skills:**
+**Patchwork Skills:**
 
 -   Combining plots horizontally with `+`
 -   Stacking plots vertically with `/`
@@ -921,7 +919,7 @@ Throughout this exercise, I have successfully demonstrated:
 -   Creating inset plots
 -   Applying themes to composite figures
 
-✅ **Extended Analysis Skills:**
+**Extended Analysis Skills:**
 
 -   Conducting exploratory data analysis
 -   Performing statistical hypothesis tests
@@ -936,4 +934,3 @@ Throughout this exercise, I have successfully demonstrated:
 -   [ggthemes](https://yutannihilation.github.io/allYourFigureAreBelongToUs/ggthemes/)
 -   [hrbrthemes](https://cinc.rud.is/web/packages/hrbrthemes/)
 -   [R for Visual Analytics - Chapter 2](https://r4va.netlify.app/chap02)
-

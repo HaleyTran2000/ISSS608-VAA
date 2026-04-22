@@ -138,6 +138,10 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     <a class="dropdown-item" href="../../Hands-on_Ex/Hands-on_Ex01/Hands-on_Ex01.html">
  <span class="dropdown-text">Hands-on Excercises-1</span></a>
   </li>  
+        <li>
+    <a class="dropdown-item" href="../../Hands-on_Ex/Hands-on_Ex02/Hands-on_Ex02.html">
+ <span class="dropdown-text">Hands-on Excercises-2</span></a>
+  </li>  
     </ul>
   </li>
   <li class="nav-item dropdown ">
@@ -364,7 +368,7 @@ $ Profit           &lt;dbl&gt; 5.5512, -5.4870, 4.2717, -64.7748, 4.8840, 746.40
 <h2 data-number="2.2" class="anchored" data-anchor-id="summary-statistics"><span class="header-section-number">2.2</span> Summary Statistics</h2>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Summary of numerical variables</span></span>
-<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(superstore[, <span class="fu">c</span>(<span class="st">"Sales"</span>, <span class="st">"Quantity"</span>, <span class="st">"Discount"</span>, <span class="st">"Profit"</span>)])</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(superstore[, <span class="fu">c</span>(<span class="st">"Sales"</span>, <span class="st">"Quantity"</span>, <span class="st">"Discount"</span>, <span class="st">"Profit"</span>, <span class="st">"Order Date"</span>, <span class="st">"Ship Date"</span>)])</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>     Sales              Quantity         Discount          Profit         
  Min.   :    0.444   Min.   : 1.000   Min.   :0.0000   Min.   :-6599.978  
@@ -372,7 +376,14 @@ $ Profit           &lt;dbl&gt; 5.5512, -5.4870, 4.2717, -64.7748, 4.8840, 746.40
  Median :   53.910   Median : 3.000   Median :0.2000   Median :    8.690  
  Mean   :  228.226   Mean   : 3.792   Mean   :0.1554   Mean   :   28.673  
  3rd Qu.:  209.500   3rd Qu.: 5.000   3rd Qu.:0.2000   3rd Qu.:   29.298  
- Max.   :22638.480   Max.   :14.000   Max.   :0.8000   Max.   : 8399.976  </code></pre>
+ Max.   :22638.480   Max.   :14.000   Max.   :0.8000   Max.   : 8399.976  
+   Order Date                    Ship Date                  
+ Min.   :2022-01-03 00:00:00   Min.   :2022-01-07 00:00:00  
+ 1st Qu.:2023-05-14 00:00:00   1st Qu.:2023-05-19 00:00:00  
+ Median :2024-06-25 00:00:00   Median :2024-06-28 00:00:00  
+ Mean   :2024-04-29 06:40:28   Mean   :2024-05-03 05:44:31  
+ 3rd Qu.:2025-05-14 00:00:00   3rd Qu.:2025-05-18 00:00:00  
+ Max.   :2025-12-30 00:00:00   Max.   :2026-01-05 00:00:00  </code></pre>
 </div>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Check for missing values</span></span>
 <span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a><span class="fu">colSums</span>(<span class="fu">is.na</span>(superstore))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
@@ -1540,7 +1551,7 @@ loaded via a namespace (and not attached):
 <span id="cb35-68"><a href="#cb35-68" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb35-71"><a href="#cb35-71" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
 <span id="cb35-72"><a href="#cb35-72" aria-hidden="true" tabindex="-1"></a><span class="co"># Summary of numerical variables</span></span>
-<span id="cb35-73"><a href="#cb35-73" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(superstore[, <span class="fu">c</span>(<span class="st">"Sales"</span>, <span class="st">"Quantity"</span>, <span class="st">"Discount"</span>, <span class="st">"Profit"</span>)])</span>
+<span id="cb35-73"><a href="#cb35-73" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(superstore[, <span class="fu">c</span>(<span class="st">"Sales"</span>, <span class="st">"Quantity"</span>, <span class="st">"Discount"</span>, <span class="st">"Profit"</span>, <span class="st">"Order Date"</span>, <span class="st">"Ship Date"</span>)])</span>
 <span id="cb35-74"><a href="#cb35-74" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb35-75"><a href="#cb35-75" aria-hidden="true" tabindex="-1"></a><span class="co"># Check for missing values</span></span>
 <span id="cb35-76"><a href="#cb35-76" aria-hidden="true" tabindex="-1"></a><span class="fu">colSums</span>(<span class="fu">is.na</span>(superstore))</span>
