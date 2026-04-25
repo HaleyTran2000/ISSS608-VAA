@@ -16,7 +16,7 @@ execute:
   eval: true
   echo: true
   warning: false
-  freeze: true
+  freeze: false
 ---
 
 # Overview
@@ -58,13 +58,44 @@ summary(exam_data)
 
 ### Data Quality Assessment
 
+::: {.panel-tabset}
+## Results
+
 ```{r}
+#| echo: false
 # Calculate data quality metrics
 n_students <- nrow(exam_data)
 n_complete_cases <- sum(complete.cases(exam_data))
 missing_counts <- colSums(is.na(exam_data))
 completeness_rate <- (n_complete_cases / n_students) * 100
+
+# Display results
+cat("Total students:", n_students, "\n")
+cat("Complete cases:", n_complete_cases, "\n")
+cat("Completeness rate:", round(completeness_rate, 1), "%\n")
+cat("Missing values per column:\n")
+print(missing_counts)
 ```
+
+## Code
+
+```{r}
+#| eval: false
+#| echo: true
+# Calculate data quality metrics
+n_students <- nrow(exam_data)
+n_complete_cases <- sum(complete.cases(exam_data))
+missing_counts <- colSums(is.na(exam_data))
+completeness_rate <- (n_complete_cases / n_students) * 100
+
+# Display results
+cat("Total students:", n_students, "\n")
+cat("Complete cases:", n_complete_cases, "\n")
+cat("Completeness rate:", round(completeness_rate, 1), "%\n")
+cat("Missing values per column:\n")
+print(missing_counts)
+```
+:::
 
 ::: callout-note
 ## Data Quality Summary
@@ -85,7 +116,11 @@ if (sum(missing_counts) == 0) {
 
 ### Categorical Variable Distribution
 
+::: {.panel-tabset}
+## Results
+
 ```{r}
+#| echo: false
 # Analyze categorical distributions
 gender_dist <- table(exam_data$GENDER)
 race_dist <- table(exam_data$RACE)
@@ -95,9 +130,8 @@ class_dist <- table(exam_data$CLASS)
 gender_prop <- prop.table(gender_dist) * 100
 race_prop <- prop.table(race_dist) * 100
 class_prop <- prop.table(class_dist) * 100
-```
 
-```{r}
+# Display
 cat("Gender Distribution:\n")
 print(gender_dist)
 cat("\nRace Distribution:\n")
@@ -105,6 +139,31 @@ print(race_dist)
 cat("\nClass Distribution:\n")
 print(class_dist)
 ```
+
+## Code
+
+```{r}
+#| eval: false
+#| echo: true
+# Analyze categorical distributions
+gender_dist <- table(exam_data$GENDER)
+race_dist <- table(exam_data$RACE)
+class_dist <- table(exam_data$CLASS)
+
+# Calculate proportions
+gender_prop <- prop.table(gender_dist) * 100
+race_prop <- prop.table(race_dist) * 100
+class_prop <- prop.table(class_dist) * 100
+
+# Display
+cat("Gender Distribution:\n")
+print(gender_dist)
+cat("\nRace Distribution:\n")
+print(race_dist)
+cat("\nClass Distribution:\n")
+print(class_dist)
+```
+:::
 
 ::: callout-tip
 ## Sample Composition Analysis
@@ -120,7 +179,7 @@ print(class_dist)
 
 ## The Problem: Overlapping Labels
 
-::: panel-tabset
+::: {.panel-tabset}
 ## Plot
 
 ```{r}
@@ -155,10 +214,26 @@ ggplot(data=exam_data,
 ```
 :::
 
+::: {.panel-tabset}
+## Results
+
 ```{r}
+#| echo: false
 # Calculate correlation for interpretation
 cor_maths_english <- cor(exam_data$MATHS, exam_data$ENGLISH)
+cat("Correlation between Maths and English:", round(cor_maths_english, 3))
 ```
+
+## Code
+
+```{r}
+#| eval: false
+#| echo: true
+# Calculate correlation for interpretation
+cor_maths_english <- cor(exam_data$MATHS, exam_data$ENGLISH)
+cat("Correlation between Maths and English:", round(cor_maths_english, 3))
+```
+:::
 
 ::: callout-warning
 ## Visualization Issue Identified
@@ -170,7 +245,7 @@ The plot does show a `r ifelse(cor_maths_english > 0, "positive", "negative")` c
 
 ## The Solution: Using ggrepel
 
-::: panel-tabset
+::: {.panel-tabset}
 ## Plot
 
 ```{r}
@@ -213,7 +288,11 @@ Using `geom_label_repel()` instead of `geom_label()` successfully **eliminates l
 
 ## Extended Analysis: Selective Labeling Strategy
 
+::: {.panel-tabset}
+## Results
+
 ```{r}
+#| echo: false
 # Calculate performance metrics
 exam_data_labeled <- exam_data %>%
   mutate(
@@ -229,9 +308,40 @@ exam_data_labeled <- exam_data %>%
 top_10_threshold <- quantile(exam_data_labeled$total_score, 0.9)
 bottom_10_threshold <- quantile(exam_data_labeled$total_score, 0.1)
 n_labeled <- sum(exam_data_labeled$performance_label != "")
+
+cat("Top 10% threshold:", round(top_10_threshold, 1), "\n")
+cat("Bottom 10% threshold:", round(bottom_10_threshold, 1), "\n")
+cat("Number of labeled students:", n_labeled, "\n")
 ```
 
-::: panel-tabset
+## Code
+
+```{r}
+#| eval: false
+#| echo: true
+# Calculate performance metrics
+exam_data_labeled <- exam_data %>%
+  mutate(
+    total_score = MATHS + ENGLISH + SCIENCE,
+    performance_label = case_when(
+      total_score >= quantile(total_score, 0.9) ~ ID,
+      total_score <= quantile(total_score, 0.1) ~ ID,
+      TRUE ~ ""
+    )
+  )
+
+# Identify thresholds
+top_10_threshold <- quantile(exam_data_labeled$total_score, 0.9)
+bottom_10_threshold <- quantile(exam_data_labeled$total_score, 0.1)
+n_labeled <- sum(exam_data_labeled$performance_label != "")
+
+cat("Top 10% threshold:", round(top_10_threshold, 1), "\n")
+cat("Bottom 10% threshold:", round(bottom_10_threshold, 1), "\n")
+cat("Number of labeled students:", n_labeled, "\n")
+```
+:::
+
+::: {.panel-tabset}
 ## Plot
 
 ```{r}
@@ -301,14 +411,20 @@ ggplot(data=exam_data_labeled,
 
 **Selective Approach:** Instead of labeling all `r n_students` students, this visualization strategically labels only **`r n_labeled` students** (`r round(n_labeled/n_students*100, 1)`% of the sample) - specifically the top and bottom 10% performers.
 
-**Performance Thresholds:** - **Top 10%:** Total score ≥ `r round(top_10_threshold, 1)` points - **Bottom 10%:** Total score ≤ `r round(bottom_10_threshold, 1)` points
+**Performance Thresholds:** 
+- **Top 10%:** Total score ≥ `r round(top_10_threshold, 1)` points 
+- **Bottom 10%:** Total score ≤ `r round(bottom_10_threshold, 1)` points
 
 **Key Insight:** The color gradient reveals that high performers in Mathematics tend to also score high in English (note the concentration of yellow/bright points in the upper-right quadrant), confirming the strong correlation (r = `r round(cor_maths_english, 3)`) and suggesting that academic ability is **relatively consistent across subjects** for exceptional students.
 :::
 
 ## Gender-Based Performance Comparison
 
+::: {.panel-tabset}
+## Results
+
 ```{r}
+#| echo: false
 # Calculate gender-specific correlations and statistics
 gender_stats <- exam_data %>%
   group_by(GENDER) %>%
@@ -318,9 +434,30 @@ gender_stats <- exam_data %>%
     mean_maths = mean(MATHS),
     mean_english = mean(ENGLISH)
   )
+
+print(gender_stats)
 ```
 
-::: panel-tabset
+## Code
+
+```{r}
+#| eval: false
+#| echo: true
+# Calculate gender-specific correlations and statistics
+gender_stats <- exam_data %>%
+  group_by(GENDER) %>%
+  summarise(
+    n = n(),
+    cor_me = cor(MATHS, ENGLISH),
+    mean_maths = mean(MATHS),
+    mean_english = mean(ENGLISH)
+  )
+
+print(gender_stats)
+```
+:::
+
+::: {.panel-tabset}
 ## Plot
 
 ```{r}
@@ -369,22 +506,51 @@ ggplot(data=exam_data,
 ```
 :::
 
+::: {.panel-tabset}
+## Results
+
 ```{r}
+#| echo: false
 # Calculate slope differences
 lm_male <- lm(ENGLISH ~ MATHS, data = filter(exam_data, GENDER == "Male"))
 lm_female <- lm(ENGLISH ~ MATHS, data = filter(exam_data, GENDER == "Female"))
 slope_male <- coef(lm_male)[2]
 slope_female <- coef(lm_female)[2]
+
+cat("Male slope:", round(slope_male, 3), "\n")
+cat("Female slope:", round(slope_female, 3), "\n")
+cat("Slope difference:", round(slope_male - slope_female, 3), "\n")
 ```
+
+## Code
+
+```{r}
+#| eval: false
+#| echo: true
+# Calculate slope differences
+lm_male <- lm(ENGLISH ~ MATHS, data = filter(exam_data, GENDER == "Male"))
+lm_female <- lm(ENGLISH ~ MATHS, data = filter(exam_data, GENDER == "Female"))
+slope_male <- coef(lm_male)[2]
+slope_female <- coef(lm_female)[2]
+
+cat("Male slope:", round(slope_male, 3), "\n")
+cat("Female slope:", round(slope_female, 3), "\n")
+cat("Slope difference:", round(slope_male - slope_female, 3), "\n")
+```
+:::
 
 ::: callout-important
 ## Gender Comparison Insights
 
 **Sample Sizes:** `r gender_stats$n[gender_stats$GENDER == "Male"]` Male students vs `r gender_stats$n[gender_stats$GENDER == "Female"]` Female students.
 
-**Correlation Strength:** - Male students: r = `r round(gender_stats$cor_me[gender_stats$GENDER == "Male"], 3)` - Female students: r = `r round(gender_stats$cor_me[gender_stats$GENDER == "Female"], 3)`
+**Correlation Strength:** 
+- Male students: r = `r round(gender_stats$cor_me[gender_stats$GENDER == "Male"], 3)` 
+- Female students: r = `r round(gender_stats$cor_me[gender_stats$GENDER == "Female"], 3)`
 
-**Performance Patterns:** - **Mathematics:** Males averaged `r round(gender_stats$mean_maths[gender_stats$GENDER == "Male"], 1)` vs Females `r round(gender_stats$mean_maths[gender_stats$GENDER == "Female"], 1)` (difference: `r round(abs(diff(gender_stats$mean_maths)), 1)` points) - **English:** Males averaged `r round(gender_stats$mean_english[gender_stats$GENDER == "Male"], 1)` vs Females `r round(gender_stats$mean_english[gender_stats$GENDER == "Female"], 1)` (difference: `r round(abs(diff(gender_stats$mean_english)), 1)` points)
+**Performance Patterns:** 
+- **Mathematics:** Males averaged `r round(gender_stats$mean_maths[gender_stats$GENDER == "Male"], 1)` vs Females `r round(gender_stats$mean_maths[gender_stats$GENDER == "Female"], 1)` (difference: `r round(abs(diff(gender_stats$mean_maths)), 1)` points) 
+- **English:** Males averaged `r round(gender_stats$mean_english[gender_stats$GENDER == "Male"], 1)` vs Females `r round(gender_stats$mean_english[gender_stats$GENDER == "Female"], 1)` (difference: `r round(abs(diff(gender_stats$mean_english)), 1)` points)
 
 **Regression Analysis:** The slope of the relationship differs slightly (`r round(slope_male, 3)` for males vs `r round(slope_female, 3)` for females), suggesting `r ifelse(abs(slope_male - slope_female) < 0.1, "similar performance patterns", ifelse(slope_male > slope_female, "males show stronger correlation between subjects", "females show stronger correlation between subjects"))`.
 :::
@@ -393,15 +559,42 @@ slope_female <- coef(lm_female)[2]
 
 ## Built-in Theme Comparison
 
+::: {.panel-tabset}
+## Results
+
 ```{r}
+#| echo: false
 # Calculate distribution statistics for interpretation
 maths_mean <- mean(exam_data$MATHS)
 maths_median <- median(exam_data$MATHS)
 maths_sd <- sd(exam_data$MATHS)
 skewness <- (maths_mean - maths_median) / maths_sd
+
+cat("Mathematics Mean:", round(maths_mean, 1), "\n")
+cat("Mathematics Median:", round(maths_median, 1), "\n")
+cat("Mathematics SD:", round(maths_sd, 1), "\n")
+cat("Skewness coefficient:", round(skewness, 3), "\n")
 ```
 
-::: panel-tabset
+## Code
+
+```{r}
+#| eval: false
+#| echo: true
+# Calculate distribution statistics for interpretation
+maths_mean <- mean(exam_data$MATHS)
+maths_median <- median(exam_data$MATHS)
+maths_sd <- sd(exam_data$MATHS)
+skewness <- (maths_mean - maths_median) / maths_sd
+
+cat("Mathematics Mean:", round(maths_mean, 1), "\n")
+cat("Mathematics Median:", round(maths_median, 1), "\n")
+cat("Mathematics SD:", round(maths_sd, 1), "\n")
+cat("Skewness coefficient:", round(skewness, 3), "\n")
+```
+:::
+
+::: {.panel-tabset}
 ## Plot
 
 ```{r}
@@ -442,7 +635,7 @@ ggplot(data=exam_data, aes(x = MATHS)) +
 
 ## Professional Themes: ggthemes
 
-::: panel-tabset
+::: {.panel-tabset}
 ## Plot
 
 ```{r}
@@ -479,7 +672,7 @@ The **Economist theme** provides a professional, publication-ready aesthetic sui
 
 ## Typography-Focused: hrbrthemes
 
-::: panel-tabset
+::: {.panel-tabset}
 ## Plot
 
 ```{r}
@@ -508,7 +701,7 @@ ggplot(data=exam_data, aes(x = MATHS)) +
 ```
 :::
 
-::: panel-tabset
+::: {.panel-tabset}
 ## Plot
 
 ```{r}
@@ -545,7 +738,11 @@ The customized `theme_ipsum()` with larger fonts (axis titles: 18pt, base: 15pt)
 
 ## Theme Effectiveness Comparison
 
+::: {.panel-tabset}
+## Results
+
 ```{r}
+#| echo: false
 create_themed_plot <- function(theme_name, theme_func) {
   ggplot(data=exam_data, aes(x = ENGLISH)) +
     geom_histogram(bins=20, boundary = 100,
@@ -557,9 +754,34 @@ create_themed_plot <- function(theme_name, theme_func) {
 # Calculate English score statistics
 english_mean <- mean(exam_data$ENGLISH)
 english_sd <- sd(exam_data$ENGLISH)
+
+cat("English Mean:", round(english_mean, 1), "\n")
+cat("English SD:", round(english_sd, 1), "\n")
 ```
 
-::: panel-tabset
+## Code
+
+```{r}
+#| eval: false
+#| echo: true
+create_themed_plot <- function(theme_name, theme_func) {
+  ggplot(data=exam_data, aes(x = ENGLISH)) +
+    geom_histogram(bins=20, boundary = 100,
+                   color="grey25", fill="grey90") +
+    ggtitle(theme_name) +
+    theme_func
+}
+
+# Calculate English score statistics
+english_mean <- mean(exam_data$ENGLISH)
+english_sd <- sd(exam_data$ENGLISH)
+
+cat("English Mean:", round(english_mean, 1), "\n")
+cat("English SD:", round(english_sd, 1), "\n")
+```
+:::
+
+::: {.panel-tabset}
 ## Plot
 
 ```{r}
@@ -619,7 +841,7 @@ Each theme serves different communication purposes when displaying the English s
 
 ## Creating Component Visualizations
 
-::: panel-tabset
+::: {.panel-tabset}
 ## Plot
 
 ```{r}
@@ -650,7 +872,7 @@ p1
 ```
 :::
 
-::: panel-tabset
+::: {.panel-tabset}
 ## Plot
 
 ```{r}
@@ -681,7 +903,7 @@ p2
 ```
 :::
 
-::: panel-tabset
+::: {.panel-tabset}
 ## Plot
 
 ```{r}
@@ -714,7 +936,11 @@ p3
 
 ## Two-Panel Layout
 
+::: {.panel-tabset}
+## Results
+
 ```{r}
+#| echo: false
 # Compare distributions
 comparison_stats <- tibble(
   Subject = c("Mathematics", "English"),
@@ -723,9 +949,29 @@ comparison_stats <- tibble(
   Range = c(max(exam_data$MATHS) - min(exam_data$MATHS),
             max(exam_data$ENGLISH) - min(exam_data$ENGLISH))
 )
+
+knitr::kable(comparison_stats, digits = 2)
 ```
 
-::: panel-tabset
+## Code
+
+```{r}
+#| eval: false
+#| echo: true
+# Compare distributions
+comparison_stats <- tibble(
+  Subject = c("Mathematics", "English"),
+  Mean = c(maths_mean, english_mean),
+  SD = c(maths_sd, english_sd),
+  Range = c(max(exam_data$MATHS) - min(exam_data$MATHS),
+            max(exam_data$ENGLISH) - min(exam_data$ENGLISH))
+)
+
+knitr::kable(comparison_stats, digits = 2)
+```
+:::
+
+::: {.panel-tabset}
 ## Plot
 
 ```{r}
@@ -758,7 +1004,7 @@ p1 + p2
 
 ## Complex Three-Panel Layout
 
-::: panel-tabset
+::: {.panel-tabset}
 ## Plot
 
 ```{r}
@@ -784,7 +1030,9 @@ p1 + p2
 
 This layout effectively tells a complete story:
 
-**Left panels (distributions):** Show individual subject performance characteristics - Mathematics: `r n_students` students, μ = `r round(maths_mean, 1)` - English: `r n_students` students, μ = `r round(english_mean, 1)`
+**Left panels (distributions):** Show individual subject performance characteristics 
+- Mathematics: `r n_students` students, μ = `r round(maths_mean, 1)` 
+- English: `r n_students` students, μ = `r round(english_mean, 1)`
 
 **Right panel (relationship):** Reveals strong positive correlation (r = `r round(cor_maths_english, 3)`)
 
@@ -793,7 +1041,7 @@ This layout effectively tells a complete story:
 
 ## Tagged Figure for Academic Reference
 
-::: panel-tabset
+::: {.panel-tabset}
 ## Plot
 
 ```{r}
@@ -824,7 +1072,7 @@ Auto-tagging (I, II, III) enables precise referencing in academic writing. For e
 
 ## Inset Visualization
 
-::: panel-tabset
+::: {.panel-tabset}
 ## Plot
 
 ```{r}
@@ -853,7 +1101,7 @@ The inset histogram provides **immediate context** for the scatter plot by showi
 
 ## Themed Composite
 
-::: panel-tabset
+::: {.panel-tabset}
 ## Plot
 
 ```{r}
@@ -886,7 +1134,11 @@ Applying `theme_economist()` across all panels creates **visual consistency** es
 
 ## Multi-Subject Statistical Overview
 
+::: {.panel-tabset}
+## Results
+
 ```{r}
+#| echo: false
 # Calculate comprehensive statistics
 science_mean <- mean(exam_data$SCIENCE)
 science_sd <- sd(exam_data$SCIENCE)
@@ -908,13 +1160,67 @@ knitr::kable(summary_stats, digits = 2,
              caption = "Comprehensive Summary Statistics by Subject")
 ```
 
+## Code
+
 ```{r}
+#| eval: false
+#| echo: true
+# Calculate comprehensive statistics
+science_mean <- mean(exam_data$SCIENCE)
+science_sd <- sd(exam_data$SCIENCE)
+science_median <- median(exam_data$SCIENCE)
+english_median <- median(exam_data$ENGLISH)
+
+summary_stats <- tibble(
+  Subject = c("Mathematics", "English", "Science"),
+  Mean = c(maths_mean, english_mean, science_mean),
+  Median = c(maths_median, english_median, science_median),
+  SD = c(maths_sd, english_sd, science_sd),
+  Min = c(min(exam_data$MATHS), min(exam_data$ENGLISH), min(exam_data$SCIENCE)),
+  Max = c(max(exam_data$MATHS), max(exam_data$ENGLISH), max(exam_data$SCIENCE)),
+  Range = Max - Min,
+  CV = (SD / Mean) * 100
+)
+
+knitr::kable(summary_stats, digits = 2,
+             caption = "Comprehensive Summary Statistics by Subject")
+```
+:::
+
+::: {.panel-tabset}
+## Results
+
+```{r}
+#| echo: false
 # Identify best and worst performing subjects
 best_subject <- summary_stats$Subject[which.max(summary_stats$Mean)]
 worst_subject <- summary_stats$Subject[which.min(summary_stats$Mean)]
 most_variable <- summary_stats$Subject[which.max(summary_stats$CV)]
 least_variable <- summary_stats$Subject[which.min(summary_stats$CV)]
+
+cat("Best performing subject:", best_subject, "\n")
+cat("Worst performing subject:", worst_subject, "\n")
+cat("Most variable subject:", most_variable, "\n")
+cat("Least variable subject:", least_variable, "\n")
 ```
+
+## Code
+
+```{r}
+#| eval: false
+#| echo: true
+# Identify best and worst performing subjects
+best_subject <- summary_stats$Subject[which.max(summary_stats$Mean)]
+worst_subject <- summary_stats$Subject[which.min(summary_stats$Mean)]
+most_variable <- summary_stats$Subject[which.max(summary_stats$CV)]
+least_variable <- summary_stats$Subject[which.min(summary_stats$CV)]
+
+cat("Best performing subject:", best_subject, "\n")
+cat("Worst performing subject:", worst_subject, "\n")
+cat("Most variable subject:", most_variable, "\n")
+cat("Least variable subject:", least_variable, "\n")
+```
+:::
 
 ::: callout-important
 ## Comparative Subject Performance Analysis
@@ -925,14 +1231,20 @@ least_variable <- summary_stats$Subject[which.min(summary_stats$CV)]
 
 **Performance Gap:** `r round(max(summary_stats$Mean) - min(summary_stats$Mean), 1)` points between highest and lowest performing subjects
 
-**Variability Analysis:** - **Most Variable:** `r most_variable` (CV = `r round(max(summary_stats$CV), 1)`%) - indicates greatest performance heterogeneity - **Least Variable:** `r least_variable` (CV = `r round(min(summary_stats$CV), 1)`%) - indicates most consistent performance across students
+**Variability Analysis:** 
+- **Most Variable:** `r most_variable` (CV = `r round(max(summary_stats$CV), 1)`%) - indicates greatest performance heterogeneity 
+- **Least Variable:** `r least_variable` (CV = `r round(min(summary_stats$CV), 1)`%) - indicates most consistent performance across students
 
 **Key Insight:** The coefficient of variation reveals that `r most_variable` shows `r round(max(summary_stats$CV)/min(summary_stats$CV), 1)`× more relative variability than `r least_variable`, suggesting `r ifelse(most_variable == "Mathematics", "students have more diverse mathematical abilities", ifelse(most_variable == "English", "language proficiency varies more widely among students", "scientific understanding is more heterogeneous"))`.
 :::
 
 ## Correlation Matrix Analysis
 
+::: {.panel-tabset}
+## Results
+
 ```{r}
+#| echo: false
 cor_matrix <- exam_data %>%
   select(MATHS, ENGLISH, SCIENCE) %>%
   cor()
@@ -941,7 +1253,25 @@ knitr::kable(round(cor_matrix, 3),
              caption = "Pearson Correlation Matrix: Subject Relationships")
 ```
 
+## Code
+
 ```{r}
+#| eval: false
+#| echo: true
+cor_matrix <- exam_data %>%
+  select(MATHS, ENGLISH, SCIENCE) %>%
+  cor()
+
+knitr::kable(round(cor_matrix, 3), 
+             caption = "Pearson Correlation Matrix: Subject Relationships")
+```
+:::
+
+::: {.panel-tabset}
+## Results
+
+```{r}
+#| echo: false
 # Extract correlations
 cor_me <- cor_matrix["MATHS", "ENGLISH"]
 cor_ms <- cor_matrix["MATHS", "SCIENCE"]
@@ -951,7 +1281,34 @@ cor_es <- cor_matrix["ENGLISH", "SCIENCE"]
 cors <- c(ME = cor_me, MS = cor_ms, ES = cor_es)
 strongest_pair <- names(cors)[which.max(cors)]
 strongest_value <- max(cors)
+
+cat("Math-English correlation:", round(cor_me, 3), "\n")
+cat("Math-Science correlation:", round(cor_ms, 3), "\n")
+cat("English-Science correlation:", round(cor_es, 3), "\n")
+cat("Strongest pair:", strongest_pair, "=", round(strongest_value, 3), "\n")
 ```
+
+## Code
+
+```{r}
+#| eval: false
+#| echo: true
+# Extract correlations
+cor_me <- cor_matrix["MATHS", "ENGLISH"]
+cor_ms <- cor_matrix["MATHS", "SCIENCE"]
+cor_es <- cor_matrix["ENGLISH", "SCIENCE"]
+
+# Determine strongest correlation
+cors <- c(ME = cor_me, MS = cor_ms, ES = cor_es)
+strongest_pair <- names(cors)[which.max(cors)]
+strongest_value <- max(cors)
+
+cat("Math-English correlation:", round(cor_me, 3), "\n")
+cat("Math-Science correlation:", round(cor_ms, 3), "\n")
+cat("English-Science correlation:", round(cor_es, 3), "\n")
+cat("Strongest pair:", strongest_pair, "=", round(strongest_value, 3), "\n")
+```
+:::
 
 ::: callout-important
 ## Inter-Subject Correlation Insights
@@ -960,14 +1317,24 @@ strongest_value <- max(cors)
 
 This means `r round(strongest_value^2 * 100, 1)`% of variance is shared between these subjects.
 
-**All Correlations:** - Math-English: r = `r round(cor_me, 3)` (`r ifelse(cor_me > 0.7, "strong", ifelse(cor_me > 0.4, "moderate", "weak"))` positive) - Math-Science: r = `r round(cor_ms, 3)` (`r ifelse(cor_ms > 0.7, "strong", ifelse(cor_ms > 0.4, "moderate", "weak"))` positive) - English-Science: r = `r round(cor_es, 3)` (`r ifelse(cor_es > 0.7, "strong", ifelse(cor_es > 0.4, "moderate", "weak"))` positive)
+**All Correlations:** 
+- Math-English: r = `r round(cor_me, 3)` (`r ifelse(cor_me > 0.7, "strong", ifelse(cor_me > 0.4, "moderate", "weak"))` positive) 
+- Math-Science: r = `r round(cor_ms, 3)` (`r ifelse(cor_ms > 0.7, "strong", ifelse(cor_ms > 0.4, "moderate", "weak"))` positive) 
+- English-Science: r = `r round(cor_es, 3)` (`r ifelse(cor_es > 0.7, "strong", ifelse(cor_es > 0.4, "moderate", "weak"))` positive)
 
-**Educational Implication:** All correlations exceed 0.7, indicating **strong positive relationships** across subjects. Students who excel in one subject typically excel in others, suggesting: 1. Shared cognitive abilities underpin performance 2. Study habits and motivation are consistent across subjects 3. Interventions should target general academic skills rather than subject-specific remediation
+**Educational Implication:** All correlations exceed 0.7, indicating **strong positive relationships** across subjects. Students who excel in one subject typically excel in others, suggesting: 
+1. Shared cognitive abilities underpin performance 
+2. Study habits and motivation are consistent across subjects 
+3. Interventions should target general academic skills rather than subject-specific remediation
 :::
 
 ## Gender-Based Performance Analysis
 
+::: {.panel-tabset}
+## Results
+
 ```{r}
+#| echo: false
 gender_analysis <- exam_data %>%
   group_by(GENDER) %>%
   summarise(
@@ -985,7 +1352,34 @@ knitr::kable(gender_analysis, digits = 2,
              caption = "Performance Metrics by Gender")
 ```
 
+## Code
+
 ```{r}
+#| eval: false
+#| echo: true
+gender_analysis <- exam_data %>%
+  group_by(GENDER) %>%
+  summarise(
+    N = n(),
+    Maths_Mean = mean(MATHS),
+    English_Mean = mean(ENGLISH),
+    Science_Mean = mean(SCIENCE),
+    Maths_SD = sd(MATHS),
+    English_SD = sd(ENGLISH),
+    Science_SD = sd(SCIENCE),
+    Total_Mean = mean(MATHS + ENGLISH + SCIENCE)
+  )
+
+knitr::kable(gender_analysis, digits = 2,
+             caption = "Performance Metrics by Gender")
+```
+:::
+
+::: {.panel-tabset}
+## Results
+
+```{r}
+#| echo: false
 # Calculate differences
 male_stats <- gender_analysis %>% filter(GENDER == "Male")
 female_stats <- gender_analysis %>% filter(GENDER == "Female")
@@ -997,14 +1391,47 @@ total_diff <- male_stats$Total_Mean - female_stats$Total_Mean
 
 # Determine which gender performs better overall
 better_gender <- ifelse(total_diff > 0, "Male", "Female")
+
+cat("Maths difference (M-F):", round(maths_diff, 1), "\n")
+cat("English difference (M-F):", round(english_diff, 1), "\n")
+cat("Science difference (M-F):", round(science_diff, 1), "\n")
+cat("Total difference (M-F):", round(total_diff, 1), "\n")
+cat("Better overall gender:", better_gender, "\n")
 ```
+
+## Code
+
+```{r}
+#| eval: false
+#| echo: true
+# Calculate differences
+male_stats <- gender_analysis %>% filter(GENDER == "Male")
+female_stats <- gender_analysis %>% filter(GENDER == "Female")
+
+maths_diff <- male_stats$Maths_Mean - female_stats$Maths_Mean
+english_diff <- male_stats$English_Mean - female_stats$English_Mean
+science_diff <- male_stats$Science_Mean - female_stats$Science_Mean
+total_diff <- male_stats$Total_Mean - female_stats$Total_Mean
+
+# Determine which gender performs better overall
+better_gender <- ifelse(total_diff > 0, "Male", "Female")
+
+cat("Maths difference (M-F):", round(maths_diff, 1), "\n")
+cat("English difference (M-F):", round(english_diff, 1), "\n")
+cat("Science difference (M-F):", round(science_diff, 1), "\n")
+cat("Total difference (M-F):", round(total_diff, 1), "\n")
+cat("Better overall gender:", better_gender, "\n")
+```
+:::
 
 ::: callout-note
 ## Gender Performance Comparison
 
 **Sample Distribution:** `r male_stats$N` males vs `r female_stats$N` females
 
-**Subject-Specific Differences:** - **Mathematics:** `r ifelse(maths_diff > 0, "Males", "Females")` lead by `r abs(round(maths_diff, 1))` points - **English:** `r ifelse(english_diff > 0, "Males", "Females")` lead by `r abs(round(english_diff, 1))` points\
+**Subject-Specific Differences:** 
+- **Mathematics:** `r ifelse(maths_diff > 0, "Males", "Females")` lead by `r abs(round(maths_diff, 1))` points 
+- **English:** `r ifelse(english_diff > 0, "Males", "Females")` lead by `r abs(round(english_diff, 1))` points  
 - **Science:** `r ifelse(science_diff > 0, "Males", "Females")` lead by `r abs(round(science_diff, 1))` points
 
 **Overall Performance:** `r better_gender` students show higher total performance by `r abs(round(total_diff, 1))` points on average.
@@ -1014,7 +1441,7 @@ better_gender <- ifelse(total_diff > 0, "Male", "Female")
 
 ### Gender Performance Visualization
 
-::: panel-tabset
+::: {.panel-tabset}
 ## Plot
 
 ```{r}
@@ -1063,7 +1490,11 @@ exam_data %>%
 ```
 :::
 
+::: {.panel-tabset}
+## Results
+
 ```{r}
+#| echo: false
 # Calculate IQR for each group
 iqr_analysis <- exam_data %>%
   pivot_longer(cols = c(MATHS, ENGLISH, SCIENCE),
@@ -1076,7 +1507,33 @@ iqr_analysis <- exam_data %>%
     IQR = IQR(Score),
     .groups = "drop"
   )
+
+knitr::kable(iqr_analysis, digits = 2,
+             caption = "IQR Analysis by Subject and Gender")
 ```
+
+## Code
+
+```{r}
+#| eval: false
+#| echo: true
+# Calculate IQR for each group
+iqr_analysis <- exam_data %>%
+  pivot_longer(cols = c(MATHS, ENGLISH, SCIENCE),
+               names_to = "Subject", values_to = "Score") %>%
+  group_by(Subject, GENDER) %>%
+  summarise(
+    Q1 = quantile(Score, 0.25),
+    Median = median(Score),
+    Q3 = quantile(Score, 0.75),
+    IQR = IQR(Score),
+    .groups = "drop"
+  )
+
+knitr::kable(iqr_analysis, digits = 2,
+             caption = "IQR Analysis by Subject and Gender")
+```
+:::
 
 ::: callout-tip
 ## Boxplot Distribution Insights
@@ -1106,7 +1563,11 @@ for (subj in c("MATHS", "ENGLISH", "SCIENCE")) {
 
 ## Race-Based Performance Analysis
 
+::: {.panel-tabset}
+## Results
+
 ```{r}
+#| echo: false
 race_analysis <- exam_data %>%
   group_by(RACE) %>%
   summarise(
@@ -1123,12 +1584,58 @@ knitr::kable(race_analysis, digits = 2,
              caption = "Performance Metrics by Race (Ranked by Total Score)")
 ```
 
+## Code
+
 ```{r}
+#| eval: false
+#| echo: true
+race_analysis <- exam_data %>%
+  group_by(RACE) %>%
+  summarise(
+    N = n(),
+    Maths_Mean = mean(MATHS),
+    English_Mean = mean(ENGLISH),
+    Science_Mean = mean(SCIENCE),
+    Total_Mean = mean(MATHS + ENGLISH + SCIENCE),
+    Overall_SD = sd(MATHS + ENGLISH + SCIENCE)
+  ) %>%
+  arrange(desc(Total_Mean))
+
+knitr::kable(race_analysis, digits = 2,
+             caption = "Performance Metrics by Race (Ranked by Total Score)")
+```
+:::
+
+::: {.panel-tabset}
+## Results
+
+```{r}
+#| echo: false
 # Calculate performance gaps
 best_race <- race_analysis$RACE[1]
 worst_race <- race_analysis$RACE[nrow(race_analysis)]
 performance_gap <- race_analysis$Total_Mean[1] - race_analysis$Total_Mean[nrow(race_analysis)]
+
+cat("Best performing race:", best_race, "\n")
+cat("Worst performing race:", worst_race, "\n")
+cat("Performance gap:", round(performance_gap, 1), "points\n")
 ```
+
+## Code
+
+```{r}
+#| eval: false
+#| echo: true
+# Calculate performance gaps
+best_race <- race_analysis$RACE[1]
+worst_race <- race_analysis$RACE[nrow(race_analysis)]
+performance_gap <- race_analysis$Total_Mean[1] - race_analysis$Total_Mean[nrow(race_analysis)]
+
+cat("Best performing race:", best_race, "\n")
+cat("Worst performing race:", worst_race, "\n")
+cat("Performance gap:", round(performance_gap, 1), "points\n")
+```
+:::
 
 ::: callout-important
 ## Racial Group Performance Analysis
@@ -1156,7 +1663,7 @@ for (i in 1:nrow(race_analysis)) {
 
 ### Race Performance Visualization
 
-::: panel-tabset
+::: {.panel-tabset}
 ## Plot
 
 ```{r}
@@ -1213,8 +1720,8 @@ exam_data %>%
 ```
 :::
 
-::: callout-note
-## Cross-Racial Subject Performance Patterns
+::: {.panel-tabset}
+## Results
 
 ```{r}
 #| echo: false
@@ -1231,26 +1738,50 @@ subject_variation <- exam_data %>%
   ) %>%
   arrange(desc(Range))
 
-cat(paste0("**Most Variable Subject Across Races:** ", 
-           subject_variation$Subject[1], 
-           " (range = ", round(subject_variation$Range[1], 1), 
-           " points)\n\n"))
-
-cat(paste0("**Most Consistent Subject Across Races:** ", 
-           subject_variation$Subject[nrow(subject_variation)], 
-           " (range = ", round(subject_variation$Range[nrow(subject_variation)], 1), 
-           " points)\n\n"))
-
-cat(paste0("The ", round(subject_variation$Range[1] / subject_variation$Range[nrow(subject_variation)], 1), 
-           "× greater variability in ", subject_variation$Subject[1], 
-           " suggests that racial background may have differential impact on subject performance, ",
-           "with ", subject_variation$Subject[1], " showing greater sensitivity to demographic factors."))
+knitr::kable(subject_variation, digits = 2,
+             caption = "Subject Variation Across Racial Groups")
 ```
+
+## Code
+
+```{r}
+#| eval: false
+#| echo: true
+# Analyze which subject shows most variation across races
+subject_variation <- exam_data %>%
+  pivot_longer(cols = c(MATHS, ENGLISH, SCIENCE),
+               names_to = "Subject", values_to = "Score") %>%
+  group_by(Subject, RACE) %>%
+  summarise(Mean = mean(Score), .groups = "drop") %>%
+  group_by(Subject) %>%
+  summarise(
+    Range = max(Mean) - min(Mean),
+    .groups = "drop"
+  ) %>%
+  arrange(desc(Range))
+
+knitr::kable(subject_variation, digits = 2,
+             caption = "Subject Variation Across Racial Groups")
+```
+:::
+
+::: callout-note
+## Cross-Racial Subject Performance Patterns
+
+**Most Variable Subject Across Races:** `r subject_variation$Subject[1]` (range = `r round(subject_variation$Range[1], 1)` points)
+
+**Most Consistent Subject Across Races:** `r subject_variation$Subject[nrow(subject_variation)]` (range = `r round(subject_variation$Range[nrow(subject_variation)], 1)` points)
+
+The `r round(subject_variation$Range[1] / subject_variation$Range[nrow(subject_variation)], 1)`× greater variability in `r subject_variation$Subject[1]` suggests that racial background may have differential impact on subject performance, with `r subject_variation$Subject[1]` showing greater sensitivity to demographic factors.
 :::
 
 ## Class-Level Performance Analysis
 
+::: {.panel-tabset}
+## Results
+
 ```{r}
+#| echo: false
 class_analysis <- exam_data %>%
   group_by(CLASS) %>%
   summarise(
@@ -1267,12 +1798,60 @@ knitr::kable(class_analysis, digits = 2,
              caption = "Performance Metrics by Class (Ranked by Total Score)")
 ```
 
+## Code
+
 ```{r}
+#| eval: false
+#| echo: true
+class_analysis <- exam_data %>%
+  group_by(CLASS) %>%
+  summarise(
+    N = n(),
+    Maths_Mean = mean(MATHS),
+    English_Mean = mean(ENGLISH),
+    Science_Mean = mean(SCIENCE),
+    Total_Mean = mean(MATHS + ENGLISH + SCIENCE),
+    Total_SD = sd(MATHS + ENGLISH + SCIENCE)
+  ) %>%
+  arrange(desc(Total_Mean))
+
+knitr::kable(class_analysis, digits = 2,
+             caption = "Performance Metrics by Class (Ranked by Total Score)")
+```
+:::
+
+::: {.panel-tabset}
+## Results
+
+```{r}
+#| echo: false
 # Analyze class performance distribution
 best_class <- class_analysis$CLASS[1]
 worst_class <- class_analysis$CLASS[nrow(class_analysis)]
 class_gap <- class_analysis$Total_Mean[1] - class_analysis$Total_Mean[nrow(class_analysis)]
+
+cat("Best class:", best_class, "\n")
+cat("Worst class:", worst_class, "\n")
+cat("Class gap:", round(class_gap, 1), "points\n")
+cat("CV across classes:", round(sd(class_analysis$Total_Mean) / mean(class_analysis$Total_Mean) * 100, 1), "%\n")
 ```
+
+## Code
+
+```{r}
+#| eval: false
+#| echo: true
+# Analyze class performance distribution
+best_class <- class_analysis$CLASS[1]
+worst_class <- class_analysis$CLASS[nrow(class_analysis)]
+class_gap <- class_analysis$Total_Mean[1] - class_analysis$Total_Mean[nrow(class_analysis)]
+
+cat("Best class:", best_class, "\n")
+cat("Worst class:", worst_class, "\n")
+cat("Class gap:", round(class_gap, 1), "points\n")
+cat("CV across classes:", round(sd(class_analysis$Total_Mean) / mean(class_analysis$Total_Mean) * 100, 1), "%\n")
+```
+:::
 
 ::: callout-warning
 ## Class-Level Performance Disparities
@@ -1290,7 +1869,11 @@ class_gap <- class_analysis$Total_Mean[1] - class_analysis$Total_Mean[nrow(class
 
 ## Comprehensive Density Analysis
 
+::: {.panel-tabset}
+## Results
+
 ```{r}
+#| echo: false
 # Analyze distribution overlap
 density_stats <- exam_data %>%
   pivot_longer(cols = c(MATHS, ENGLISH, SCIENCE),
@@ -1301,9 +1884,33 @@ density_stats <- exam_data %>%
     Spread = IQR(Score),
     .groups = "drop"
   )
+
+knitr::kable(density_stats, digits = 2,
+             caption = "Density Statistics by Subject")
 ```
 
-::: panel-tabset
+## Code
+
+```{r}
+#| eval: false
+#| echo: true
+# Analyze distribution overlap
+density_stats <- exam_data %>%
+  pivot_longer(cols = c(MATHS, ENGLISH, SCIENCE),
+               names_to = "Subject", values_to = "Score") %>%
+  group_by(Subject) %>%
+  summarise(
+    Peak = median(Score),
+    Spread = IQR(Score),
+    .groups = "drop"
+  )
+
+knitr::kable(density_stats, digits = 2,
+             caption = "Density Statistics by Subject")
+```
+:::
+
+::: {.panel-tabset}
 ## Plot
 
 ```{r}
@@ -1380,7 +1987,11 @@ for (i in 1:nrow(density_stats)) {
 
 ## Ridge Plot: Class Performance Distribution
 
+::: {.panel-tabset}
+## Results
+
 ```{r}
+#| echo: false
 # Analyze distribution shapes by class
 class_distribution <- exam_data %>%
   group_by(CLASS) %>%
@@ -1397,9 +2008,39 @@ class_distribution <- exam_data %>%
       TRUE ~ "Left-skewed"
     )
   )
+
+knitr::kable(class_distribution, digits = 2,
+             caption = "Distribution Shape by Class")
 ```
 
-::: panel-tabset
+## Code
+
+```{r}
+#| eval: false
+#| echo: true
+# Analyze distribution shapes by class
+class_distribution <- exam_data %>%
+  group_by(CLASS) %>%
+  summarise(
+    Mean = mean(MATHS),
+    Median = median(MATHS),
+    Skew = (Mean - Median) / sd(MATHS),
+    .groups = "drop"
+  ) %>%
+  mutate(
+    Shape = case_when(
+      abs(Skew) < 0.2 ~ "Symmetric",
+      Skew > 0 ~ "Right-skewed",
+      TRUE ~ "Left-skewed"
+    )
+  )
+
+knitr::kable(class_distribution, digits = 2,
+             caption = "Distribution Shape by Class")
+```
+:::
+
+::: {.panel-tabset}
 ## Plot
 
 ```{r}
@@ -1462,7 +2103,7 @@ for (i in 1:nrow(class_distribution)) {
 
 ## Correlation Visualization Matrix
 
-::: panel-tabset
+::: {.panel-tabset}
 ## Plot
 
 ```{r}
@@ -1508,18 +2149,28 @@ exam_data %>%
 
 This pairs plot reveals:
 
-**1. Diagonal (Distributions):** - Gender-stratified densities show `r ifelse(abs(maths_diff) < 5 & abs(english_diff) < 5 & abs(science_diff) < 5, "similar distribution shapes", "distinct distribution patterns")` between males and females - Both groups show `r ifelse(maths_mean > 60 & english_mean > 60 & science_mean > 60, "generally high performance", "mixed performance")` across subjects
+**1. Diagonal (Distributions):** 
+- Gender-stratified densities show `r ifelse(abs(maths_diff) < 5 & abs(english_diff) < 5 & abs(science_diff) < 5, "similar distribution shapes", "distinct distribution patterns")` between males and females 
+- Both groups show `r ifelse(maths_mean > 60 & english_mean > 60 & science_mean > 60, "generally high performance", "mixed performance")` across subjects
 
-**2. Upper Triangle (Correlations):** - All correlations exceed 0.7, indicating **strong linear relationships** - Gender-specific correlations are `r ifelse(max(cors) - min(cors) < 0.1, "remarkably similar", "moderately different")` (range: `r round(min(cors), 3)` to `r round(max(cors), 3)`)
+**2. Upper Triangle (Correlations):** 
+- All correlations exceed 0.7, indicating **strong linear relationships** 
+- Gender-specific correlations are `r ifelse(max(cors) - min(cors) < 0.1, "remarkably similar", "moderately different")` (range: `r round(min(cors), 3)` to `r round(max(cors), 3)`)
 
-**3. Lower Triangle (Scatter Plots):** - Point clouds show `r ifelse(mean(cors) > 0.8, "tight linear patterns", "moderate scatter")` confirming correlation strength - Color separation reveals `r ifelse(abs(total_diff) > 10, "visible performance differences", "overlapping performance")` between genders
+**3. Lower Triangle (Scatter Plots):** 
+- Point clouds show `r ifelse(mean(cors) > 0.8, "tight linear patterns", "moderate scatter")` confirming correlation strength 
+- Color separation reveals `r ifelse(abs(total_diff) > 10, "visible performance differences", "overlapping performance")` between genders
 
 **Practical Implication:** The consistently high correlations (mean r = `r round(mean(cors), 3)`) across all subject pairs suggest that **general academic ability** rather than subject-specific talent drives performance in this cohort.
 :::
 
 ## Performance Category Heatmap
 
+::: {.panel-tabset}
+## Results
+
 ```{r}
+#| echo: false
 # Categorize performance
 exam_performance <- exam_data %>%
   mutate(
@@ -1539,9 +2190,42 @@ diagonal_count <- exam_performance %>%
   pull(total)
 
 diagonal_pct <- (diagonal_count / n_students) * 100
+
+cat("Diagonal count (consistent performance):", diagonal_count, "\n")
+cat("Diagonal percentage:", round(diagonal_pct, 1), "%\n")
 ```
 
-::: panel-tabset
+## Code
+
+```{r}
+#| eval: false
+#| echo: true
+# Categorize performance
+exam_performance <- exam_data %>%
+  mutate(
+    Maths_Category = cut(MATHS, 
+                         breaks = c(0, 50, 70, 100), 
+                         labels = c("Below Average", "Average", "Above Average")),
+    English_Category = cut(ENGLISH, 
+                           breaks = c(0, 50, 70, 100), 
+                           labels = c("Below Average", "Average", "Above Average"))
+  ) %>%
+  count(Maths_Category, English_Category)
+
+# Calculate diagonal vs off-diagonal patterns
+diagonal_count <- exam_performance %>%
+  filter(Maths_Category == English_Category) %>%
+  summarise(total = sum(n)) %>%
+  pull(total)
+
+diagonal_pct <- (diagonal_count / n_students) * 100
+
+cat("Diagonal count (consistent performance):", diagonal_count, "\n")
+cat("Diagonal percentage:", round(diagonal_pct, 1), "%\n")
+```
+:::
+
+::: {.panel-tabset}
 ## Plot
 
 ```{r}
@@ -1602,7 +2286,11 @@ ggplot(exam_performance,
 
 ## Top Performers Identification
 
+::: {.panel-tabset}
+## Results
+
 ```{r}
+#| echo: false
 # Rank students
 exam_ranked <- exam_data %>%
   mutate(
@@ -1623,7 +2311,37 @@ knitr::kable(
 )
 ```
 
+## Code
+
 ```{r}
+#| eval: false
+#| echo: true
+# Rank students
+exam_ranked <- exam_data %>%
+  mutate(
+    Total_Score = MATHS + ENGLISH + SCIENCE,
+    Average_Score = Total_Score / 3,
+    Percentile = percent_rank(Total_Score) * 100,
+    Rank = dense_rank(desc(Total_Score))
+  ) %>%
+  arrange(Rank)
+
+# Top 10
+top_10 <- exam_ranked %>% head(10)
+knitr::kable(
+  top_10 %>% 
+    select(Rank, ID, CLASS, GENDER, RACE, MATHS, ENGLISH, SCIENCE, Total_Score, Percentile),
+  digits = 1,
+  caption = "Top 10 Highest Achieving Students"
+)
+```
+:::
+
+::: {.panel-tabset}
+## Results
+
+```{r}
+#| echo: false
 # Analyze top performer characteristics
 top_10_summary <- top_10 %>%
   summarise(
@@ -1635,14 +2353,42 @@ top_10_summary <- top_10 %>%
     Male_Count = sum(GENDER == "Male"),
     Female_Count = sum(GENDER == "Female")
   )
+
+knitr::kable(top_10_summary, digits = 2,
+             caption = "Top 10 Performers Summary Statistics")
 ```
+
+## Code
+
+```{r}
+#| eval: false
+#| echo: true
+# Analyze top performer characteristics
+top_10_summary <- top_10 %>%
+  summarise(
+    Avg_Total = mean(Total_Score),
+    Min_Total = min(Total_Score),
+    Avg_Maths = mean(MATHS),
+    Avg_English = mean(ENGLISH),
+    Avg_Science = mean(SCIENCE),
+    Male_Count = sum(GENDER == "Male"),
+    Female_Count = sum(GENDER == "Female")
+  )
+
+knitr::kable(top_10_summary, digits = 2,
+             caption = "Top 10 Performers Summary Statistics")
+```
+:::
 
 ::: callout-note
 ## Top Performer Characteristics
 
 **Performance Threshold:** Top 10 students scored between `r round(top_10_summary$Min_Total, 1)` and `r round(max(top_10$Total_Score), 1)` total points, averaging `r round(top_10_summary$Avg_Total, 1)` points.
 
-**Subject Breakdown for Top 10:** - Mathematics: `r round(top_10_summary$Avg_Maths, 1)` average - English: `r round(top_10_summary$Avg_English, 1)` average - Science: `r round(top_10_summary$Avg_Science, 1)` average
+**Subject Breakdown for Top 10:** 
+- Mathematics: `r round(top_10_summary$Avg_Maths, 1)` average 
+- English: `r round(top_10_summary$Avg_English, 1)` average 
+- Science: `r round(top_10_summary$Avg_Science, 1)` average
 
 **Gender Distribution:** `r top_10_summary$Male_Count` males, `r top_10_summary$Female_Count` females among top 10, suggesting `r ifelse(abs(top_10_summary$Male_Count - top_10_summary$Female_Count) <= 2, "balanced representation", ifelse(top_10_summary$Male_Count > top_10_summary$Female_Count, "male predominance", "female predominance"))` in top achievement.
 
@@ -1651,7 +2397,11 @@ top_10_summary <- top_10 %>%
 
 ### Top Performers Visualization
 
+::: {.panel-tabset}
+## Results
+
 ```{r}
+#| echo: false
 # Analyze balance in top performers
 balance_analysis <- top_10 %>%
   mutate(
@@ -1660,9 +2410,31 @@ balance_analysis <- top_10 %>%
   )
 
 n_balanced <- sum(balance_analysis$Balanced)
+
+cat("Number of balanced performers:", n_balanced, "\n")
+cat("Number of specialized performers:", 10 - n_balanced, "\n")
 ```
 
-::: panel-tabset
+## Code
+
+```{r}
+#| eval: false
+#| echo: true
+# Analyze balance in top performers
+balance_analysis <- top_10 %>%
+  mutate(
+    Score_Range = pmax(MATHS, ENGLISH, SCIENCE) - pmin(MATHS, ENGLISH, SCIENCE),
+    Balanced = Score_Range < 10
+  )
+
+n_balanced <- sum(balance_analysis$Balanced)
+
+cat("Number of balanced performers:", n_balanced, "\n")
+cat("Number of specialized performers:", 10 - n_balanced, "\n")
+```
+:::
+
+::: {.panel-tabset}
 ## Plot
 
 ```{r}
@@ -1724,7 +2496,9 @@ top_10 %>%
 ::: callout-tip
 ## Top Performer Balance Analysis
 
-**Balanced vs Specialized:** - **`r n_balanced` students** (`r round(n_balanced/10*100)`%) show balanced performance (\< 10 points difference across subjects) - **`r 10 - n_balanced` students** (`r round((10-n_balanced)/10*100)`%) show more specialization (≥ 10 points difference)
+**Balanced vs Specialized:** 
+- **`r n_balanced` students** (`r round(n_balanced/10*100)`%) show balanced performance (< 10 points difference across subjects) 
+- **`r 10 - n_balanced` students** (`r round((10-n_balanced)/10*100)`%) show more specialization (≥ 10 points difference)
 
 **Interpretation:** The `r ifelse(n_balanced >= 7, "high proportion of balanced performers", "mixed pattern of balance and specialization")` among top students suggests that **consistent excellence across subjects** `r ifelse(n_balanced >= 7, "is the primary path to top achievement", "is not the only path to top achievement")` in this cohort.
 :::
@@ -1733,7 +2507,11 @@ top_10 %>%
 
 ### Gender Differences Analysis
 
+::: {.panel-tabset}
+## Results
+
 ```{r}
+#| echo: false
 # T-tests for all subjects
 t_maths <- t.test(MATHS ~ GENDER, data = exam_data)
 t_english <- t.test(ENGLISH ~ GENDER, data = exam_data)
@@ -1762,16 +2540,75 @@ knitr::kable(t_test_results, digits = 3,
              caption = "Independent Samples t-test: Gender Differences")
 ```
 
+## Code
+
 ```{r}
+#| eval: false
+#| echo: true
+# T-tests for all subjects
+t_maths <- t.test(MATHS ~ GENDER, data = exam_data)
+t_english <- t.test(ENGLISH ~ GENDER, data = exam_data)
+t_science <- t.test(SCIENCE ~ GENDER, data = exam_data)
+
+# Create summary table
+t_test_results <- tibble(
+  Subject = c("Mathematics", "English", "Science"),
+  Male_Mean = c(
+    t_maths$estimate[1],
+    t_english$estimate[1],
+    t_science$estimate[1]
+  ),
+  Female_Mean = c(
+    t_maths$estimate[2],
+    t_english$estimate[2],
+    t_science$estimate[2]
+  ),
+  Difference = Male_Mean - Female_Mean,
+  t_statistic = c(t_maths$statistic, t_english$statistic, t_science$statistic),
+  p_value = c(t_maths$p.value, t_english$p.value, t_science$p.value),
+  Significant = p_value < 0.05
+)
+
+knitr::kable(t_test_results, digits = 3,
+             caption = "Independent Samples t-test: Gender Differences")
+```
+:::
+
+::: {.panel-tabset}
+## Results
+
+```{r}
+#| echo: false
 # Count significant differences
 n_significant <- sum(t_test_results$Significant)
 sig_subjects <- t_test_results$Subject[t_test_results$Significant]
+
+cat("Number of significant differences:", n_significant, "\n")
+if (n_significant > 0) {
+  cat("Significant subjects:", paste(sig_subjects, collapse = ", "), "\n")
+}
 ```
+
+## Code
+
+```{r}
+#| eval: false
+#| echo: true
+# Count significant differences
+n_significant <- sum(t_test_results$Significant)
+sig_subjects <- t_test_results$Subject[t_test_results$Significant]
+
+cat("Number of significant differences:", n_significant, "\n")
+if (n_significant > 0) {
+  cat("Significant subjects:", paste(sig_subjects, collapse = ", "), "\n")
+}
+```
+:::
 
 ::: callout-important
 ## Gender Difference Statistical Conclusions
 
-**Significant Differences Detected:** `r n_significant` out of 3 subjects show statistically significant gender differences (p \< 0.05)
+**Significant Differences Detected:** `r n_significant` out of 3 subjects show statistically significant gender differences (p < 0.05)
 
 ```{r}
 #| echo: false
@@ -1812,7 +2649,11 @@ for (i in 1:nrow(t_test_results)) {
 
 ### Racial Group Differences Analysis
 
+::: {.panel-tabset}
+## Results
+
 ```{r}
+#| echo: false
 # ANOVA for Mathematics
 anova_maths <- aov(MATHS ~ RACE, data = exam_data)
 anova_summary <- summary(anova_maths)
@@ -1820,11 +2661,26 @@ anova_summary <- summary(anova_maths)
 # Extract F-statistic and p-value
 f_stat <- anova_summary[[1]]$`F value`[1]
 p_val <- anova_summary[[1]]$`Pr(>F)`[1]
-```
 
-```{r}
 print(anova_summary)
 ```
+
+## Code
+
+```{r}
+#| eval: false
+#| echo: true
+# ANOVA for Mathematics
+anova_maths <- aov(MATHS ~ RACE, data = exam_data)
+anova_summary <- summary(anova_maths)
+
+# Extract F-statistic and p-value
+f_stat <- anova_summary[[1]]$`F value`[1]
+p_val <- anova_summary[[1]]$`Pr(>F)`[1]
+
+print(anova_summary)
+```
+:::
 
 ::: callout-important
 ## Racial Group Comparison: ANOVA Results
@@ -1840,7 +2696,7 @@ F-statistic = `r round(f_stat, 3)`, p-value = `r round(p_val, 4)`
 
 # Comprehensive Performance Dashboard
 
-::: panel-tabset
+::: {.panel-tabset}
 ## Plot
 
 ```{r}
@@ -1987,25 +2843,63 @@ This integrated dashboard synthesizes key findings:
 
 ## Overall Performance Summary
 
+::: {.panel-tabset}
+## Results
+
 ```{r}
+#| echo: false
 # Calculate comprehensive statistics
 overall_mean <- mean(c(maths_mean, english_mean, science_mean))
 best_performing_subject <- summary_stats$Subject[which.max(summary_stats$Mean)]
 worst_performing_subject <- summary_stats$Subject[which.min(summary_stats$Mean)]
+
+cat("Overall mean across subjects:", round(overall_mean, 1), "\n")
+cat("Best performing subject:", best_performing_subject, "\n")
+cat("Worst performing subject:", worst_performing_subject, "\n")
 ```
+
+## Code
+
+```{r}
+#| eval: false
+#| echo: true
+# Calculate comprehensive statistics
+overall_mean <- mean(c(maths_mean, english_mean, science_mean))
+best_performing_subject <- summary_stats$Subject[which.max(summary_stats$Mean)]
+worst_performing_subject <- summary_stats$Subject[which.min(summary_stats$Mean)]
+
+cat("Overall mean across subjects:", round(overall_mean, 1), "\n")
+cat("Best performing subject:", best_performing_subject, "\n")
+cat("Worst performing subject:", worst_performing_subject, "\n")
+```
+:::
 
 ::: callout-important
 ## Data-Driven Performance Conclusions
 
-**1. Subject Performance Hierarchy** - **Highest:** `r best_performing_subject` (μ = `r round(max(summary_stats$Mean), 1)`) - **Lowest:** `r worst_performing_subject` (μ = `r round(min(summary_stats$Mean), 1)`) - **Gap:** `r round(max(summary_stats$Mean) - min(summary_stats$Mean), 1)` points
+**1. Subject Performance Hierarchy** 
+- **Highest:** `r best_performing_subject` (μ = `r round(max(summary_stats$Mean), 1)`) 
+- **Lowest:** `r worst_performing_subject` (μ = `r round(min(summary_stats$Mean), 1)`) 
+- **Gap:** `r round(max(summary_stats$Mean) - min(summary_stats$Mean), 1)` points
 
-**2. Inter-Subject Relationships** - **Average correlation:** r = `r round(mean(cors), 3)` - **Shared variance:** `r round(mean(cors)^2 * 100, 1)`% - **Interpretation:** Students showing excellence in one subject have a **`r round(mean(cors) * 100, 1)`% probability** of excelling in others
+**2. Inter-Subject Relationships** 
+- **Average correlation:** r = `r round(mean(cors), 3)` 
+- **Shared variance:** `r round(mean(cors)^2 * 100, 1)`% 
+- **Interpretation:** Students showing excellence in one subject have a **`r round(mean(cors) * 100, 1)`% probability** of excelling in others
 
-**3. Demographic Factors** - **Gender impact:** `r ifelse(n_significant == 0, "No significant effect detected", paste(n_significant, "subjects show significant differences"))` - **Racial disparities:** `r round(performance_gap, 1)` point gap (`r ifelse(p_val < 0.05, "statistically significant", "not significant")`)
+**3. Demographic Factors** 
+- **Gender impact:** `r ifelse(n_significant == 0, "No significant effect detected", paste(n_significant, "subjects show significant differences"))` 
+- **Racial disparities:** `r round(performance_gap, 1)` point gap (`r ifelse(p_val < 0.05, "statistically significant", "not significant")`)
 
-**4. Class-Level Variation** - **Between-class gap:** `r round(class_gap, 1)` points - **CV across classes:** `r round(sd(class_analysis$Total_Mean) / mean(class_analysis$Total_Mean) * 100, 1)`% - **Quality assessment:** `r ifelse(class_gap < 15, "Acceptable consistency", ifelse(class_gap < 30, "Moderate variation requiring attention", "Significant disparities requiring intervention"))`
+**4. Class-Level Variation** 
+- **Between-class gap:** `r round(class_gap, 1)` points 
+- **CV across classes:** `r round(sd(class_analysis$Total_Mean) / mean(class_analysis$Total_Mean) * 100, 1)`% 
+- **Quality assessment:** `r ifelse(class_gap < 15, "Acceptable consistency", ifelse(class_gap < 30, "Moderate variation requiring attention", "Significant disparities requiring intervention"))`
 
-**5. Performance Distribution** - **Top 10% threshold:** ≥ `r round(top_10_threshold, 1)` total points - **Bottom 10% threshold:** ≤ `r round(bottom_10_threshold, 1)` total points - **Performance spread:** `r round(top_10_threshold - bottom_10_threshold, 1)` points between excellence and struggle
+**5. Performance Distribution** 
+- **Top 10% threshold:** ≥ `r round(top_10_threshold, 1)` total points 
+- **Bottom 10% threshold:** ≤ `r round(bottom_10_threshold, 1)` total points 
+- **Performance spread:** `r round(top_10_threshold - bottom_10_threshold, 1)` points between excellence and struggle
 :::
 
 ## Methodological Achievement Summary
@@ -2013,37 +2907,86 @@ worst_performing_subject <- summary_stats$Subject[which.min(summary_stats$Mean)]
 ::: callout-tip
 ## Technical Skills Demonstrated
 
-**ggrepel Implementation:** - Successfully resolved overlapping label problem affecting `r n_students` data points - Applied selective labeling strategy highlighting top/bottom `r round(n_labeled/n_students*100, 1)`% of students - Achieved 100% label readability while maintaining visualization integrity
+**ggrepel Implementation:** 
+- Successfully resolved overlapping label problem affecting `r n_students` data points 
+- Applied selective labeling strategy highlighting top/bottom `r round(n_labeled/n_students*100, 1)`% of students 
+- Achieved 100% label readability while maintaining visualization integrity
 
-**Theme Customization:** - Evaluated 6 professional themes across multiple contexts - Applied typography-focused customization (font sizes: 15-18pt) - Demonstrated publication-ready styling for academic and business audiences
+**Theme Customization:** 
+- Evaluated 6 professional themes across multiple contexts 
+- Applied typography-focused customization (font sizes: 15-18pt) 
+- Demonstrated publication-ready styling for academic and business audiences
 
-**Patchwork Composition:** - Created 2-panel, 3-panel, 4-panel, and 5-panel layouts - Implemented auto-tagging for academic referencing - Achieved unified theme application across composite figures - Utilized inset elements for space-efficient contextualization
+**Patchwork Composition:** 
+- Created 2-panel, 3-panel, 4-panel, and 5-panel layouts 
+- Implemented auto-tagging for academic referencing 
+- Achieved unified theme application across composite figures 
+- Utilized inset elements for space-efficient contextualization
 
-**Statistical Analysis:** - Conducted `r 3 + 1` hypothesis tests (3 t-tests, 1 ANOVA) - Calculated `r length(cors)` correlation coefficients - Identified `r n_significant` statistically significant demographic effects - Generated `r nrow(summary_stats) * ncol(summary_stats)` summary statistics dynamically
+**Statistical Analysis:** 
+- Conducted `r 3 + 1` hypothesis tests (3 t-tests, 1 ANOVA) 
+- Calculated `r length(cors)` correlation coefficients 
+- Identified `r n_significant` statistically significant demographic effects 
+- Generated `r nrow(summary_stats) * ncol(summary_stats)` summary statistics dynamically
 
-**Tabset Organization:** - Implemented panel-tabsets for all visualizations - Separated plot display from code display - Improved document readability and space efficiency - Enhanced user experience with interactive content organization
+**Tabset Organization:**
+- Implemented panel-tabsets for ALL visualizations AND calculations
+- Separated plot/results display from code display
+- Improved document readability and space efficiency
+- Enhanced user experience with interactive content organization
 :::
 
 ## Evidence-Based Recommendations
 
+::: {.panel-tabset}
+## Results
+
 ```{r}
+#| echo: false
 # Generate data-driven recommendations
 high_performers_pct <- sum(exam_ranked$Percentile >= 90) / n_students * 100
 low_performers_pct <- sum(exam_ranked$Percentile <= 10) / n_students * 100
+
+cat("High performers (>= 90th percentile):", round(high_performers_pct, 1), "%\n")
+cat("Low performers (<= 10th percentile):", round(low_performers_pct, 1), "%\n")
 ```
+
+## Code
+
+```{r}
+#| eval: false
+#| echo: true
+# Generate data-driven recommendations
+high_performers_pct <- sum(exam_ranked$Percentile >= 90) / n_students * 100
+low_performers_pct <- sum(exam_ranked$Percentile <= 10) / n_students * 100
+
+cat("High performers (>= 90th percentile):", round(high_performers_pct, 1), "%\n")
+cat("Low performers (<= 10th percentile):", round(low_performers_pct, 1), "%\n")
+```
+:::
 
 ::: callout-warning
 ## Actionable Insights for Educators
 
-**1. Intervention Targeting** - **`r round(low_performers_pct, 1)`%** of students (`r sum(exam_ranked$Percentile <= 10)` students) require intensive support (bottom 10%) - **Focus:** General academic skills rather than subject-specific tutoring, given high inter-subject correlation (r = `r round(mean(cors), 3)`)
+**1. Intervention Targeting** 
+- **`r round(low_performers_pct, 1)`%** of students (`r sum(exam_ranked$Percentile <= 10)` students) require intensive support (bottom 10%)
+- **Focus:** General academic skills rather than subject-specific tutoring, given high inter-subject correlation (r = `r round(mean(cors), 3)`)
 
-**2. Excellence Programs** - **`r round(high_performers_pct, 1)`%** of students (`r sum(exam_ranked$Percentile >= 90)` students) demonstrate exceptional ability - **Pattern:** `r n_balanced` of top 10 show balanced excellence across subjects - **Strategy:** `r ifelse(n_balanced >= 7, "Develop comprehensive enrichment programs", "Offer both balanced and specialized tracks")`
+**2. Excellence Programs** 
+- **`r round(high_performers_pct, 1)`%** of students (`r sum(exam_ranked$Percentile >= 90)` students) demonstrate exceptional ability
+- **Pattern:** `r n_balanced` of top 10 show balanced excellence across subjects
+- **Strategy:** `r ifelse(n_balanced >= 7, "Develop comprehensive enrichment programs", "Offer both balanced and specialized tracks")`
 
-**3. Class-Level Equity** - **Current gap:** `r round(class_gap, 1)` points between best (`r best_class`) and worst (`r worst_class`) performing classes - **Target:** Reduce gap to \< 15 points through `r ifelse(class_gap > 30, "immediate intervention", ifelse(class_gap > 15, "pedagogical review", "minor adjustments"))`
+**3. Class-Level Equity** 
+- **Current gap:** `r round(class_gap, 1)` points between best (`r best_class`) and worst (`r worst_class`) performing classes
+- **Target:** Reduce gap to < 15 points through `r ifelse(class_gap > 30, "immediate intervention", ifelse(class_gap > 15, "pedagogical review", "minor adjustments"))`
 
-**4. Gender Considerations** `r ifelse(n_significant > 0, paste0("- Address the ", n_significant, " subject(s) showing gender disparities: ", paste(sig_subjects, collapse = ", ")), "- Maintain current equitable environment (no significant gender gaps detected)")`
+**4. Gender Considerations** 
+`r ifelse(n_significant > 0, paste0("- Address the ", n_significant, " subject(s) showing gender disparities: ", paste(sig_subjects, collapse = ", ")), "- Maintain current equitable environment (no significant gender gaps detected)")`
 
-**5. Racial Equity Initiatives** - **Current disparity:** `r round(performance_gap, 1)` points (`r ifelse(p_val < 0.05, "statistically significant", "within normal variation")`) - **Action:** `r ifelse(p_val < 0.05, paste0("Investigate factors contributing to ", round(performance_gap / mean(race_analysis$Total_Mean) * 100, 1), "% performance gap and implement targeted support for ", worst_race, " students"), "Continue monitoring for emerging disparities")`
+**5. Racial Equity Initiatives** 
+- **Current disparity:** `r round(performance_gap, 1)` points (`r ifelse(p_val < 0.05, "statistically significant", "within normal variation")`)
+- **Action:** `r ifelse(p_val < 0.05, paste0("Investigate factors contributing to ", round(performance_gap / mean(race_analysis$Total_Mean) * 100, 1), "% performance gap and implement targeted support for ", worst_race, " students"), "Continue monitoring for emerging disparities")`
 :::
 
 # References
@@ -2052,4 +2995,3 @@ low_performers_pct <- sum(exam_ranked$Percentile <= 10) / n_students * 100
 -   [ggrepel](https://ggrepel.slowkow.com/)
 -   [ggthemes](https://yutannihilation.github.io/allYourFigureAreBelongToUs/ggthemes/)
 -   [hrbrthemes](https://cinc.rud.is/web/packages/hrbrthemes/)
--   [R for Visual Analytics - Chapter 2](https://r4va.netlify.app/chap02)
