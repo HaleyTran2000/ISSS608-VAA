@@ -1,0 +1,47 @@
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const tocLinks = document.querySelectorAll('#TOC a');
+  const sections = document.querySelectorAll('section[id], h1[id], h2[id], h3[id]');
+  let currentActive = null;
+  
+  function updateActiveTOC() {
+    const scrollPos = window.scrollY + 100;
+    let current = null;
+    
+    sections.forEach(section => {
+      const sectionTop = section.offsetTop;
+      const sectionHeight = section.offsetHeight;
+      if (scrollPos >= sectionTop && scrollPos < sectionTop + sectionHeight) {
+        current = section.id;
+      }
+    });
+    
+    if (current && current !== currentActive) {
+      currentActive = current;
+      
+      tocLinks.forEach(link => {
+        link.classList.remove('active');
+        const parent = link.closest('li');
+        if (parent) parent.classList.remove('active', 'active-parent');
+      });
+      
+      const activeLink = document.querySelector('#TOC a[href="#' + current + '"]');
+      if (activeLink) {
+        activeLink.classList.add('active');
+        const activeLi = activeLink.closest('li');
+        if (activeLi) {
+          activeLi.classList.add('active');
+          let parent = activeLi.parentElement?.closest('li');
+          while (parent) {
+            parent.classList.add('active-parent');
+            parent = parent.parentElement?.closest('li');
+          }
+        }
+      }
+    }
+  }
+  
+  window.addEventListener('scroll', updateActiveTOC, { passive: true });
+  updateActiveTOC();
+});
+</script>

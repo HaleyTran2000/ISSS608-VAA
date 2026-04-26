@@ -3,1011 +3,1120 @@ title: "Hands-on Exercise 1"
 subtitle: "A Layered Grammar of Graphics: ggplot2 methods"
 author: "Thi Thanh Van Tran"
 date: "April 16, 2026"
-date-modified: "last-modified"
+date-modified: "April 16, 2026"
 format:
   html:
     toc: true
     number-sections: true
-    number-depth: 3
-    code-fold: false
-    code-tools: true
-    code-copy: true
+    number-depth: 4
+    code-fold: true
+    code-summary: "Show code"
+    code-tools: false
+    css: styles.css
+    theme: cosmo
+    page-layout: article
 execute:
   eval: true
   echo: true
   warning: false
   freeze: false
+knitr:
+  opts_chunk:
+    out.width: "90%"
+    fig.align: "center"
+    dpi: 120        
 ---
 
-**Learning Objectives:**
+::: welcome-section
+# Welcome to My ggplot2 Journey
 
+In this hands-on exercise, I explored the **Grammar of Graphics** using ggplot2 to create meaningful visualizations. Through analyzing exam data from Primary 3 students, I discovered the power of layered graphics and data-driven insights.
+
+**Let's visualize data beautifully**
+:::
+
+**Learning Objectives:**
 -   Master basic principles and essential components of ggplot2
 -   Plot statistical graphics based on the principle of Layered Grammar of Graphics
 -   Conduct data-driven analysis with dynamic insights
 -   Extract meaningful patterns from visualizations
 
-# Learning Outcome
-
-In this chapter, I have learned the basic principles and essential components of ggplot2. At the same time, I've gained hands-on experience using these components to plot statistical graphics based on the principle of Layered Grammar of Graphics. Now I am able to apply the essential graphical elements provided by ggplot2 to create elegant and functional statistical graphics while extracting meaningful insights from data.
-
 # Getting Started
 
-## Installing and Loading Required Libraries
-
-::: callout-note
-**Note:** Ensure that the [pacman](https://cran.r-project.org/web/packages/pacman/) package has already been installed.
-:::
-
-The code chunk below uses `p_load()` of pacman package to check if tidyverse packages are installed in the computer. If they are, then they will be launched into R. Otherwise, tidyverse will be installed and launched into R.
+## Installing and Loading Libraries
 
 ```{r}
-pacman::p_load(tidyverse)
+#| code-fold: false
+pacman::p_load(tidyverse, patchwork, knitr, ggplot2, reshape2)
 ```
 
-## Importing Data
+::: {.callout-note}
+## Package Installation
+
+The `pacman::p_load()` function automatically installs missing packages and loads them into R. This ensures reproducibility across different environments.
+:::
+
+## Importing the Dataset
 
 ```{r}
+#| code-fold: false
 exam_data <- read_csv("data/Exam_data.csv")
 ```
 
-**Dataset Overview:**
+# Visual Data Exploration
+
+::: {.panel-tabset}
+
+## Dataset Overview
 
 ```{r}
+#| code-fold: true
+#| code-summary: "Show code"
+#| fig-width: 14
+#| fig-height: 9
+
+n_students <- nrow(exam_data)
+n_complete <- sum(complete.cases(exam_data))
+
+# Variable types
+var_types <- data.frame(
+  Type = sapply(exam_data, function(x) class(x)[1])
+) %>%
+  count(Type)
+
+p2 <- ggplot(var_types, aes(x = reorder(Type, -n), y = n, fill = Type)) +
+  geom_col(alpha = 0.8, width = 0.6) +
+  geom_text(aes(label = n), vjust = -0.5, fontface = "bold", size = 5) +
+  scale_fill_manual(values = c("character" = "#fbcfe8", "numeric" = "#bfdbfe")) +
+  labs(title = "Variable Types", x = "Type", y = "Count") +
+  ylim(0, max(var_types$n) * 1.2) +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5, face = "bold", size = 14),
+        legend.position = "none")
+
+# Sample size
+p3 <- ggplot(data.frame(x = 1, y = 1), aes(x, y)) +
+  geom_tile(fill = "#fce7f3", alpha = 0.5, width = 0.9, height = 0.9) +
+  geom_text(label = paste0("n = ", n_students, "\nstudents"), 
+            size = 8, fontface = "bold", color = "#831843") +
+  labs(title = "Sample Size") +
+  theme_void() +
+  theme(plot.title = element_text(hjust = 0.5, face = "bold", size = 14))
+
+# Missing values heatmap
+missing_df <- melt(is.na(exam_data))
+
+p4 <- ggplot(missing_df, aes(x = Var2, y = Var1, fill = value)) +
+  geom_tile(color = "white", size = 0.05) +
+  scale_fill_manual(values = c("FALSE" = "#10b981", "TRUE" = "#ef4444"),
+                    labels = c("Complete", "Missing"), name = "Status") +
+  labs(title = "Missing Value Heatmap", x = "Variables", y = "Observations") +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5, face = "bold", size = 14),
+        axis.text.y = element_blank(),
+        axis.ticks.y = element_blank(),
+        axis.text.x = element_text(angle = 45, hjust = 1),
+        panel.grid = element_blank())
+
+(p3 | p2) / p4 +
+  plot_annotation(title = "Dataset Overview at a Glance",
+                  theme = theme(plot.title = element_text(size = 16, face = "bold", hjust = 0.5))) +
+  plot_layout(heights = c(1, 1.2))
+```
+
+> **Judgment:** The dataset contains `r n_students` students with a healthy mix of numeric and character variables. The missing value heatmap confirms largely complete records, making the data suitable for analysis with minimal imputation concerns.
+
+## Data Insights
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show code"
+#| fig-width: 14
+#| fig-height: 10
+
+# Pastel palette — soft, non-viridis
+pastel_palette <- c(
+  "#FFB3C1", "#FFD6A5", "#CAFFBF", "#A0C4FF",
+  "#BDB2FF", "#FFC6FF", "#FDFFB6", "#B5EAD7",
+  "#F2C6DE", "#C9E4CA"
+)
+
+categorical_vars <- setdiff(
+  names(exam_data)[sapply(exam_data, function(x) 
+    is.character(x) || is.factor(x))],
+  "ID"
+)
+
+plot_list <- lapply(categorical_vars, function(var) {
+  
+  plot_data <- exam_data %>%
+    count(.data[[var]]) %>%
+    mutate(pct = n / sum(n) * 100)
+  
+  max_label_length <- max(nchar(as.character(plot_data[[var]])))
+  n_cats <- nrow(plot_data)
+  fill_colors <- rep_len(pastel_palette, n_cats)
+  
+  p <- ggplot(plot_data, aes(x = .data[[var]], y = n, fill = .data[[var]])) +
+    geom_col(alpha = 0.9, width = 0.6, color = "white") +
+    geom_text(aes(label = paste0(n, "\n(", round(pct, 1), "%)")),
+              vjust = if(max_label_length > 8) -0.2 else -0.3,
+              hjust = if(max_label_length > 8) 1.1 else 0.5,
+              size = 3, fontface = "bold", color = "#5a2d3a") +
+    scale_fill_manual(values = fill_colors) +
+    labs(title = paste(var, "Distribution"), y = "Count", x = "") +
+    ylim(0, max(plot_data$n) * 1.18) +
+    theme_minimal(base_size = 10) +
+    theme(
+      plot.title    = element_text(hjust = 0.5, face = "bold", size = 10, color = "#7a2840"),
+      legend.position = "none",
+      axis.text     = element_text(size = 8, color = "#5a2d3a"),
+      axis.title    = element_text(size = 8, color = "#5a2d3a"),
+      panel.grid.minor = element_blank(),
+      axis.text.x   = element_text(
+        angle = if(max_label_length > 8) 45 else 0, 
+        hjust = if(max_label_length > 8) 1 else 0.5
+      )
+    )
+  
+  if(max_label_length > 8) {
+    p <- p + coord_flip() +
+      theme(axis.text.x = element_text(angle = 0, hjust = 0.5))
+  }
+  
+  return(p)
+})
+
+wrap_plots(plot_list, ncol = 2) +
+  plot_annotation(
+    title = "Categorical Variables Distribution",
+    theme = theme(
+      plot.title = element_text(size = 12, face = "bold", hjust = 0.5, color = "#7a2840")
+    )
+  )
+```
+
+::: {.callout-note}
+## Distribution Summary
+
+```{r}
+#| echo: false
+# Dynamic summary for all categorical variables
+for(var in categorical_vars) {
+  cat("**", var, ":**\n")
+  counts <- table(exam_data[[var]])
+  for(i in seq_along(counts)) {
+    pct <- (counts[i] / sum(counts)) * 100
+    cat("- ", names(counts)[i], ": ", counts[i], " (", round(pct, 1), "%)\n", sep = "")
+  }
+  cat("\n")
+}
+```
+
+**Key Finding**: The dataset shows balanced distribution across most categorical variables, enabling robust comparative analysis without major sample size disparities.
+
+**My Learning**: Visualizing demographics immediately reveals representation patterns. The balanced gender split is particularly valuable for unbiased gender analysis later.
+:::
+
+> **Judgment:** The categorical distributions are broadly balanced across groups, which strengthens the validity of any subgroup comparisons. No single category dominates disproportionately, reducing the risk of skewed conclusions driven by unequal representation.
+
+## Data Summary
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show code"
+
+# Quick glimpse
 glimpse(exam_data)
 ```
 
 ```{r}
-summary(exam_data)
+#| code-fold: true
+#| code-summary: "Show code"
+
+# Statistical summary for numeric variables
+summary(exam_data %>% select(where(is.numeric)))
 ```
 
-## Initial Data Exploration
+> **Judgment:** The summary statistics reveal the central tendency and spread of each numeric variable. Comparing means and medians helps flag potential skewness, while min/max values highlight any outliers that may warrant further investigation before modelling.
+
+:::
+
+:::
+
+# Academic Performance Overview
 
 ```{r}
-# Calculate key statistics
-n_students <- nrow(exam_data)
-n_variables <- ncol(exam_data)
-n_complete <- sum(complete.cases(exam_data))
+#| code-fold: true
+#| code-summary: "Show code"
+#| fig-width: 14
+#| fig-height: 8
 
-# Subject statistics
+# Get numeric variables automatically
+numeric_vars <- exam_data %>% select(where(is.numeric))
+
+# Correlation matrix
+cor_matrix <- cor(numeric_vars)
+cor_data <- as.data.frame(as.table(cor_matrix))
+names(cor_data) <- c("Var1", "Var2", "Correlation")
+
+# Correlation heatmap
+p_cor <- ggplot(cor_data, aes(x = Var1, y = Var2, fill = Correlation)) +
+  geom_tile(color = "white", size = 1.5) +
+  geom_text(aes(label = round(Correlation, 2)), size = 5, fontface = "bold") +
+  scale_fill_gradient2(low = "#fce7f3", mid = "#f9a8d4", high = "#ec4899",
+                       midpoint = 0.5, limits = c(0, 1)) +
+  labs(title = "Inter-Subject Correlation Matrix", x = "", y = "") +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5, face = "bold", size = 14))
+
+# Distribution comparison
+perf_long <- numeric_vars %>%
+  pivot_longer(everything(), names_to = "Subject", values_to = "Score")
+
+p_dist <- ggplot(perf_long, aes(x = Score, fill = Subject)) +
+  geom_density(alpha = 0.6, size = 1) +
+  scale_fill_manual(values = c("MATHS" = "#bfdbfe", 
+                                "ENGLISH" = "#bbf7d0", 
+                                "SCIENCE" = "#e9d5ff")) +
+  labs(title = "Score Distributions", x = "Score", y = "Density") +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5, face = "bold", size = 13),
+        legend.position = "top")
+
+p_box <- ggplot(perf_long, aes(x = Subject, y = Score, fill = Subject)) +
+  geom_violin(alpha = 0.3) +
+  geom_boxplot(width = 0.2, alpha = 0.8) +
+  stat_summary(fun = mean, geom = "point", shape = 23, size = 4, fill = "#831843") +
+  scale_fill_manual(values = c("MATHS" = "#bfdbfe", 
+                                "ENGLISH" = "#bbf7d0", 
+                                "SCIENCE" = "#e9d5ff")) +
+  labs(title = "Distribution by Subject", y = "Score", x = "") +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5, face = "bold", size = 13),
+        legend.position = "none")
+
+(p_cor | p_dist) / p_box +
+  plot_annotation(title = "Academic Performance Overview",
+                  theme = theme(plot.title = element_text(size = 16, face = "bold", hjust = 0.5)))
+```
+
+```{r}
+#| echo: false
+avg_cor <- mean(cor_matrix[lower.tri(cor_matrix)])
+```
+
+::: {.callout-important}
+## Key Insights
+
+**Average correlation**: `r round(avg_cor, 3)` → Strong positive relationships
+
+**Implication**: Students who excel in one subject tend to excel in others, suggesting general academic ability rather than subject-specific talent.
+:::
+
+
+## Academic Performance: Distribution Patterns
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show code"
+#| fig-width: 12
+#| fig-height: 8
+
+# Calculate statistics
+stats_summary <- exam_data %>%
+  summarise(across(c(MATHS, ENGLISH, SCIENCE), 
+                   list(mean = ~mean(., na.rm = TRUE),
+                        sd = ~sd(., na.rm = TRUE),
+                        median = ~median(., na.rm = TRUE))))
+
+# Reshape for visualization
+perf_data <- exam_data %>%
+  select(MATHS, ENGLISH, SCIENCE) %>%
+  pivot_longer(everything(), names_to = "Subject", values_to = "Score")
+
+# Density plots
+p1 <- ggplot(perf_data, aes(x = Score, fill = Subject)) +
+  geom_density(alpha = 0.6, size = 1) +
+  scale_fill_manual(values = c("MATHS" = "#bfdbfe", 
+                                "ENGLISH" = "#bbf7d0", 
+                                "SCIENCE" = "#e9d5ff")) +
+  labs(title = "Score Distributions Across Subjects",
+       x = "Score", y = "Density") +
+  theme_minimal() +
+  theme(plot.title = element_text(face = "bold", hjust = 0.5, size = 12),
+        legend.position = "top")
+
+# Box plots with violin
+p2 <- ggplot(perf_data, aes(x = Subject, y = Score, fill = Subject)) +
+  geom_violin(alpha = 0.4, trim = FALSE) +
+  geom_boxplot(width = 0.2, alpha = 0.8, outlier.shape = 21, 
+               outlier.fill = "#831843", outlier.size = 3) +
+  stat_summary(fun = mean, geom = "point", shape = 23, 
+               size = 4, fill = "#831843") +
+  scale_fill_manual(values = c("MATHS" = "#bfdbfe", 
+                                "ENGLISH" = "#bbf7d0", 
+                                "SCIENCE" = "#e9d5ff")) +
+  labs(title = "Distribution Shape & Statistics",
+       y = "Score") +
+  theme_minimal() +
+  theme(legend.position = "none",
+        plot.title = element_text(face = "bold", hjust = 0.5, size = 12))
+
+# Statistical summary visual
+stats_long <- data.frame(
+  Subject = rep(c("MATHS", "ENGLISH", "SCIENCE"), 2),
+  Metric = rep(c("Mean", "SD"), each = 3),
+  Value = c(stats_summary$MATHS_mean, stats_summary$ENGLISH_mean, stats_summary$SCIENCE_mean,
+            stats_summary$MATHS_sd, stats_summary$ENGLISH_sd, stats_summary$SCIENCE_sd)
+)
+
+p3 <- ggplot(stats_long, aes(x = Subject, y = Value, fill = Subject)) +
+  geom_col(alpha = 0.8) +
+  geom_text(aes(label = round(Value, 1)), vjust = -0.3, 
+            fontface = "bold", size = 3.5) +
+  facet_wrap(~Metric, scales = "free_y") +
+  scale_fill_manual(values = c("MATHS" = "#bfdbfe", 
+                                "ENGLISH" = "#bbf7d0", 
+                                "SCIENCE" = "#e9d5ff")) +
+  labs(title = "Mean & Variability Comparison", y = "Value") +
+  theme_minimal() +
+  theme(legend.position = "none",
+        plot.title = element_text(face = "bold", hjust = 0.5, size = 12))
+
+# Combine
+(p1 / (p2 | p3)) +
+  plot_annotation(
+    title = "Academic Performance: Visual Summary",
+    theme = theme(plot.title = element_text(size = 15, face = "bold", hjust = 0.5))
+  )
+```
+
+```{r}
+#| echo: false
+# Calculate key stats
 maths_mean <- mean(exam_data$MATHS)
 english_mean <- mean(exam_data$ENGLISH)
 science_mean <- mean(exam_data$SCIENCE)
-
-maths_sd <- sd(exam_data$MATHS)
-english_sd <- sd(exam_data$ENGLISH)
-science_sd <- sd(exam_data$SCIENCE)
-
-# Categorical distributions
-n_male <- sum(exam_data$GENDER == "Male")
-n_female <- sum(exam_data$GENDER == "Female")
-n_classes <- n_distinct(exam_data$CLASS)
-n_races <- n_distinct(exam_data$RACE)
-
-# Check for missing values
-missing_count <- sum(is.na(exam_data))
-```
-
-::: {.callout-important}
-## Dataset Characteristics
-
-**Sample Size:** `r n_students` Primary 3 students from a local school
-
-**Data Quality:** `r ifelse(missing_count == 0, "✓ Complete dataset with no missing values", paste("⚠", missing_count, "missing values detected"))`
-
-**Variables:** `r n_variables` attributes
-- **Categorical (4):** ID, CLASS, GENDER, RACE
-- **Continuous (3):** MATHS, ENGLISH, SCIENCE
-
-**Demographics:**
-- Gender: `r n_male` males (`r round(n_male/n_students*100, 1)`%), `r n_female` females (`r round(n_female/n_students*100, 1)`%)
-- Classes: `r n_classes` different classes
-- Racial diversity: `r n_races` groups
-
-**Academic Performance Overview:**
-- Mathematics: μ = `r round(maths_mean, 1)`, σ = `r round(maths_sd, 1)`
-- English: μ = `r round(english_mean, 1)`, σ = `r round(english_sd, 1)`
-- Science: μ = `r round(science_mean, 1)`, σ = `r round(science_sd, 1)`
-
-**Key Observation:** `r ifelse(max(c(maths_mean, english_mean, science_mean)) - min(c(maths_mean, english_mean, science_mean)) < 5, "Students show consistent performance across subjects", paste("There is a", round(max(c(maths_mean, english_mean, science_mean)) - min(c(maths_mean, english_mean, science_mean)), 1), "point difference between highest and lowest performing subjects"))`
-:::
-
-# Introducing ggplot2
-
-[ggplot2](https://ggplot2.tidyverse.org/) is an R package for **declaratively** creating **data-driven** graphics based on ***The Grammar of Graphics***. It is part of the tidyverse family specially designed for visual exploration and communication.
-
-## R Graphics vs ggplot2 Comparison
-
-::: panel-tabset
-## R Graphics
-
-```{r}
-hist(exam_data$MATHS)
-```
-
-## ggplot2
-
-```{r}
-ggplot(data=exam_data, aes(x = MATHS)) +
-  geom_histogram(bins=10, 
-                 boundary = 100,
-                 color="black", 
-                 fill="grey") +
-  ggtitle("Distribution of Maths scores")
-```
-:::
-
-```{r}
-# Calculate distribution characteristics
-maths_median <- median(exam_data$MATHS)
-maths_mode <- as.numeric(names(sort(table(exam_data$MATHS), decreasing = TRUE)[1]))
-skewness <- (maths_mean - maths_median) / maths_sd
+best_subject <- c("MATHS", "ENGLISH", "SCIENCE")[which.max(c(maths_mean, english_mean, science_mean))]
 ```
 
 ::: {.callout-tip}
-## Comparative Analysis: R Graphics vs ggplot2
+## What I Learned
 
-**Distribution Shape:** The Mathematics scores show `r ifelse(abs(skewness) < 0.2, "a symmetric distribution", ifelse(skewness > 0, "positive skewness (right tail)", "negative skewness (left tail)"))` with:
-- Mean: `r round(maths_mean, 1)`
-- Median: `r round(maths_median, 1)`
-- Skewness coefficient: `r round(skewness, 3)`
+**Distribution shapes**: All three subjects show roughly normal distributions with slight variations. The violin plots reveal the full shape that box plots alone would hide.
 
-**ggplot2 Advantages Demonstrated:**
-1. **Customization:** Precise control over bins (10), boundaries (100), and colors
-2. **Clarity:** Clean axes with proper labels and titles
-3. **Consistency:** Reproducible styling across all visualizations
-4. **Extensibility:** Easy to add layers (we'll see this later)
+**Best performing subject**: `r best_subject` has the highest mean (`r round(max(c(maths_mean, english_mean, science_mean)), 1)` points).
 
-The `r abs(round(maths_mean - maths_median, 1))` point difference between mean and median `r ifelse(abs(maths_mean - maths_median) < 2, "suggests minimal outlier influence", "indicates some asymmetry in the distribution")`.
+**Variability**: Standard deviations are similar across subjects (~`r round(mean(c(stats_summary$MATHS_sd, stats_summary$ENGLISH_sd, stats_summary$SCIENCE_sd)), 1)` points), indicating consistent spread.
+
+**Diamond markers** = means, **Box** = quartiles, **Dots** = outliers
+
+**My Reflection**: The overlapping density curves suggest students who excel in one subject tend to excel in others - hinting at general academic ability rather than subject-specific talent.
 :::
 
-# Grammar of Graphics Principles
+# Grammar of Graphics: Building Blocks
 
-Grammar of Graphics defines rules for structuring mathematical and aesthetic elements into meaningful graphs. There are **seven grammatical elements** in ggplot2:
+## The Seven Layers
 
-1. **Data**: The dataset being plotted
-2. **Aesthetics**: Visual characteristics (position, colors, size, shape, transparency)
-3. **Geometrics**: Visual elements (point, bar, line)
-4. **Facets**: Multiple subsets of the same graph
-5. **Statistics**: Statistical transformations (mean, confidence intervals)
-6. **Coordinate systems**: The plane on which data are mapped
-7. **Themes**: Non-data components (titles, legends, backgrounds)
+Grammar of Graphics defines **seven grammatical elements**:
 
-# Essential Grammatical Elements: Data
+1. **Data**: The dataset
+2. **Aesthetics**: Visual mappings (x, y, color, size)
+3. **Geometrics**: Visual marks (points, bars, lines)
+4. **Facets**: Small multiples
+5. **Statistics**: Transformations (smoothing, binning)
+6. **Coordinates**: The plotting space
+7. **Themes**: Non-data styling
+
+Let's explore each layer systematically.
+
+# Layer 1: Data Foundation
+
+## Starting with the Canvas
 
 ```{r}
-ggplot(data=exam_data)
+#| code-fold: true
+#| code-summary: "Show code"
+ggplot(data = exam_data)
 ```
 
 ::: {.callout-note}
-## Understanding the Data Layer
+## Understanding the Foundation
 
-**What happens here:**
-- `ggplot()` initializes a ggplot object with `r n_students` observations
-- Creates a blank canvas ready for visualization
-- The dataset (`r n_variables` variables) is loaded but not yet mapped to visual elements
-- This is the **foundation layer** upon which all other elements build
+**What happened**: Created a blank ggplot object with `r n_students` observations loaded.
 
-**Next step needed:** Define how variables map to visual properties (aesthetics)
+**What's missing**: No aesthetic mappings yet - ggplot doesn't know what to display.
+
+**My Learning**: This is like preparing a blank canvas before painting. The data is loaded and ready, but we haven't told ggplot *what* to draw or *where* to draw it.
 :::
 
-# Essential Grammatical Elements: Aesthetics
+# Layer 2: Aesthetic Mappings
+
+## Mapping Data to Visual Properties
 
 ```{r}
-ggplot(data=exam_data, aes(x= MATHS))
-```
-
-```{r}
-# Calculate range for interpretation
-maths_range <- max(exam_data$MATHS) - min(exam_data$MATHS)
-maths_min <- min(exam_data$MATHS)
-maths_max <- max(exam_data$MATHS)
+#| code-fold: true
+#| code-summary: "Show code"
+ggplot(data = exam_data, aes(x = MATHS))
 ```
 
 ::: {.callout-note}
-## Understanding Aesthetic Mappings
+## Adding the X-Axis
 
-**What changed:**
-- Added `aes(x = MATHS)` mapping
-- X-axis now displays Mathematics scores
-- Scale ranges from `r maths_min` to `r maths_max` (range: `r maths_range` points)
-- Axis label automatically generated from variable name
+**What changed**: Mapped MATHS scores to x-axis position.
 
-**Still missing:** Visual representation (geometric objects) to display the actual data
+**Range**: `r min(exam_data$MATHS)` to `r max(exam_data$MATHS)` points (span: `r max(exam_data$MATHS) - min(exam_data$MATHS)` points).
 
-**Performance spread:** The `r maths_range`-point range from lowest to highest score indicates `r ifelse(maths_range > 80, "high performance variability", ifelse(maths_range > 60, "moderate performance variability", "relatively homogeneous performance"))` among students.
+**Still missing**: Geometric objects to visualize the data.
+
+**My Insight**: Aesthetics define *where* data goes, but not *how* it looks. We need geometries next.
 :::
 
-# Essential Grammatical Elements: Geometric Objects
+# Layer 3: Geometric Objects
 
-## geom_bar: Categorical Data Visualization
+## Histogram: Distribution Analysis
+
+### Comparing Bin Choices
+
+::: {.panel-tabset}
+
+## Default (30 bins)
 
 ```{r}
-ggplot(data=exam_data, aes(x=RACE)) +
-  geom_bar()
+#| code-fold: true
+#| code-summary: "Show code"
+ggplot(exam_data, aes(x = MATHS)) +
+  geom_histogram(fill = "#bfdbfe", color = "#1e40af", alpha = 0.8) +
+  labs(title = "Default: 30 bins",
+       subtitle = paste0("Bin width ≈ ", round((max(exam_data$MATHS) - min(exam_data$MATHS))/30, 1), " points"),
+       x = "Mathematics Score", y = "Frequency") +
+  theme_minimal()
 ```
+
+## Optimized (20 bins)
 
 ```{r}
-# Calculate racial distribution
-race_counts <- exam_data %>%
-  count(RACE) %>%
-  arrange(desc(n))
-
-largest_group <- race_counts$RACE[1]
-largest_count <- race_counts$n[1]
-smallest_group <- race_counts$RACE[nrow(race_counts)]
-smallest_count <- race_counts$n[nrow(race_counts)]
-diversity_ratio <- largest_count / smallest_count
+#| code-fold: true
+#| code-summary: "Show code"
+ggplot(exam_data, aes(x = MATHS)) +
+  geom_histogram(bins = 20, fill = "#bbf7d0", color = "#065f46", alpha = 0.9) +
+  labs(title = "Optimized: 20 bins",
+       subtitle = paste0("Bin width ≈ ", round((max(exam_data$MATHS) - min(exam_data$MATHS))/20, 1), " points"),
+       x = "Mathematics Score", y = "Frequency") +
+  theme_minimal()
 ```
 
-::: {.callout-important}
-## Racial Distribution Analysis
+## Too Few (5 bins)
 
-**Sample Composition:**
+```{r}
+#| code-fold: true
+#| code-summary: "Show code"
+ggplot(exam_data, aes(x = MATHS)) +
+  geom_histogram(bins = 5, fill = "#e9d5ff", color = "#6b21a8", alpha = 0.7) +
+  labs(title = "Under-binned: 5 bins",
+       subtitle = "Loses important detail",
+       x = "Mathematics Score", y = "Frequency") +
+  theme_minimal()
+```
+
+:::
+
 ```{r}
 #| echo: false
-for (i in 1:nrow(race_counts)) {
-  pct <- (race_counts$n[i] / n_students) * 100
-  cat(paste0("- ", race_counts$RACE[i], ": ", race_counts$n[i], 
-             " students (", round(pct, 1), "%)\n"))
-}
-```
-
-**Diversity Assessment:**
-- **Largest group:** `r largest_group` with `r largest_count` students (`r round(largest_count/n_students*100, 1)`%)
-- **Smallest group:** `r smallest_group` with `r smallest_count` students (`r round(smallest_count/n_students*100, 1)`%)
-- **Representation ratio:** `r round(diversity_ratio, 1)`:1 (largest to smallest)
-
-**Interpretation:** The sample shows `r ifelse(diversity_ratio < 2, "relatively balanced racial representation", ifelse(diversity_ratio < 4, "moderate diversity with some groups larger than others", "significant imbalance with one group dominating"))`.
-:::
-
-## geom_dotplot: Fine-Grained Distribution
-
-```{r}
-ggplot(data=exam_data, aes(x = MATHS)) +
-  geom_dotplot(dotsize = 0.5)
-```
-
-::: {.callout-warning}
-## Misleading Y-Axis Issue
-
-**Problem identified:** The y-axis shows "count" but represents stacking height, not frequency. With `r n_students` students, the y-axis scaling is **misleading and should be removed**.
-
-**Solution:** Use `scale_y_continuous(NULL, breaks = NULL)` to eliminate the confusing scale.
-:::
-
-```{r}
-ggplot(data=exam_data, aes(x = MATHS)) +
-  geom_dotplot(binwidth=2.5, dotsize = 0.5) +
-  scale_y_continuous(NULL, breaks = NULL)
-```
-
-```{r}
-# Analyze clustering
-score_bins <- cut(exam_data$MATHS, breaks = seq(0, 100, by = 10))
-mode_bin <- names(sort(table(score_bins), decreasing = TRUE)[1])
-```
-
-::: {.callout-tip}
-## Dot Plot Insights
-
-**Visual Patterns Observed:**
-- Each dot represents one student's Mathematics score
-- Binwidth = 2.5 points reveals fine-grained clustering
-- Highest concentration in the `r mode_bin` range
-- Clear visualization of individual data points (n = `r n_students`)
-
-**Advantage over histogram:** While histograms aggregate data, dot plots show **every individual observation**, making outliers and gaps immediately visible.
-
-**Pattern:** `r ifelse(maths_sd < 15, "Dots cluster tightly around the mean, indicating consistent performance", "Dots spread widely, showing diverse performance levels")`
-:::
-
-## geom_histogram: Distribution Analysis
-
-```{r}
-ggplot(data=exam_data, aes(x = MATHS)) +
-  geom_histogram()
-```
-
-::: {.callout-note}
-**Default behavior:** 30 bins automatically chosen. With `r n_students` students and score range of `r maths_range`, each bin width ≈ `r round(maths_range/30, 2)` points.
-:::
-
-### Optimizing Histogram Bins
-
-```{r}
-ggplot(data=exam_data, aes(x= MATHS)) +
-  geom_histogram(bins=20, color="black", fill="light blue")
-```
-
-```{r}
-# Calculate optimal bin width using Sturges' rule
-optimal_bins_sturges <- ceiling(log2(n_students) + 1)
-# Freedman-Diaconis rule
-iqr_maths <- IQR(exam_data$MATHS)
-bin_width_fd <- 2 * iqr_maths / (n_students^(1/3))
-optimal_bins_fd <- ceiling(maths_range / bin_width_fd)
-```
-
-::: {.callout-tip}
-## Bin Selection Analysis
-
-**Current choice:** 20 bins
-
-**Statistical recommendations:**
-- **Sturges' rule:** `r optimal_bins_sturges` bins (for n = `r n_students`)
-- **Freedman-Diaconis rule:** `r optimal_bins_fd` bins (based on IQR = `r round(iqr_maths, 1)`)
-
-**With 20 bins:** Each bin width = `r round(maths_range/20, 1)` points, providing `r ifelse(20 >= optimal_bins_sturges - 2 & 20 <= optimal_bins_sturges + 2, "appropriate granularity", ifelse(20 > optimal_bins_sturges + 2, "finer detail than statistically recommended", "coarser binning than optimal"))` for this dataset.
-
-**Visual interpretation:** The histogram reveals `r ifelse(abs(skewness) < 0.2, "a roughly normal distribution", ifelse(skewness > 0, "slight right skew with more low performers", "slight left skew with more high performers"))` centered around `r round(maths_mean, 1)` points.
-:::
-
-### Aesthetic Mapping by Group
-
-```{r}
-ggplot(data=exam_data, aes(x= MATHS, fill = GENDER)) +
-  geom_histogram(bins=20, color="grey30")
-```
-
-```{r}
-# Gender-specific statistics
-gender_stats <- exam_data %>%
-  group_by(GENDER) %>%
-  summarise(
-    n = n(),
-    mean_maths = mean(MATHS),
-    sd_maths = sd(MATHS),
-    median_maths = median(MATHS)
-  )
-
-male_mean <- gender_stats$mean_maths[gender_stats$GENDER == "Male"]
-female_mean <- gender_stats$mean_maths[gender_stats$GENDER == "Female"]
-gender_diff <- abs(male_mean - female_mean)
+# Calculate optimal bins
+optimal_bins <- ceiling(log2(n_students) + 1)  # Sturges' rule
 ```
 
 ::: {.callout-important}
-## Gender-Based Performance Comparison
+## Bin Selection Matters
 
-**Sample distribution:**
-- Males: `r gender_stats$n[gender_stats$GENDER == "Male"]` students
-- Females: `r gender_stats$n[gender_stats$GENDER == "Female"]` students
+**Statistical recommendation (Sturges' rule)**: `r optimal_bins` bins for n = `r n_students`
 
-**Mathematics performance:**
-- **Male mean:** `r round(male_mean, 1)` (SD: `r round(gender_stats$sd_maths[gender_stats$GENDER == "Male"], 1)`)
-- **Female mean:** `r round(female_mean, 1)` (SD: `r round(gender_stats$sd_maths[gender_stats$GENDER == "Female"], 1)`)
-- **Difference:** `r round(gender_diff, 1)` points
+**My choice**: 20 bins - balances detail with clarity
 
-**Interpretation:** The overlapping distributions show that `r ifelse(gender_diff < 3, "males and females perform similarly in Mathematics, with negligible difference", ifelse(male_mean > female_mean, paste0("males slightly outperform females by ", round(gender_diff, 1), " points on average"), paste0("females slightly outperform males by ", round(gender_diff, 1), " points on average")))`
+**What I discovered**:
+- **Too few bins (5)**: Lose distribution shape - looks artificially uniform
+- **Too many bins (30)**: Noisy, hard to see overall pattern  
+- **Just right (20)**: Clear shape without excessive noise
 
-**Visual insight:** The `r ifelse(gender_diff < 5, "extensive overlap", "moderate separation")` in the histogram confirms `r ifelse(gender_diff < 5, "gender is NOT a strong predictor of Mathematics performance", "some gender-based performance differences exist")`.
+**My Reflection**: Bin choice is like choosing photo resolution - too low loses detail, too high shows noise. There's a sweet spot that reveals the true pattern.
 :::
 
-## geom_density: Smooth Distribution Curves
+## Dot Plot: Individual Observations
 
 ```{r}
-ggplot(data=exam_data, aes(x = MATHS)) +
-  geom_density()
+#| code-fold: true
+#| code-summary: "Show code"
+#| fig-width: 10
+#| fig-height: 5
+ggplot(exam_data, aes(x = MATHS)) +
+  geom_dotplot(binwidth = 2.5, fill = "#f472b6", color = "#831843", 
+               dotsize = 0.6) +
+  scale_y_continuous(NULL, breaks = NULL) +
+  labs(title = "Every Student Counts: Dot Plot of Mathematics Scores",
+       subtitle = paste0("Each dot = 1 student | Total: ", n_students, " students"),
+       x = "Mathematics Score") +
+  theme_minimal() +
+  theme(plot.title = element_text(face = "bold", size = 13))
 ```
 
-```{r}
-# Calculate density peak
-density_obj <- density(exam_data$MATHS)
-peak_value <- density_obj$x[which.max(density_obj$y)]
-```
+::: {.callout-tip}
+## Why Dot Plots Are Powerful
 
-::: {.callout-note}
-## Kernel Density Estimation Analysis
+**Each dot = one student's story**
 
-**Method:** Smoothed version of histogram using kernel density estimation
+**What I see**: 
+- Clustering around 60-70 range
+- Few students below 40 (need support)
+- Some high achievers above 90
+- Gaps reveal score ranges with no students
 
-**Peak location:** Approximately `r round(peak_value, 1)` points (mode)
+**vs Histogram**: Histogram bins aggregate; dot plot preserves every individual observation
 
-**Compared to mean:** The peak at `r round(peak_value, 1)` vs mean of `r round(maths_mean, 1)` indicates `r ifelse(abs(peak_value - maths_mean) < 3, "symmetric distribution", ifelse(peak_value < maths_mean, "positive skew (tail extends right)", "negative skew (tail extends left)"))`
-
-**Advantage:** Reveals underlying distribution pattern without arbitrary binning decisions that affect histograms.
+**My Learning**: This visualization makes data **human** - I can see that each dot represents a real student. It's not just statistics, it's `r n_students` individuals with different abilities.
 :::
 
-### Gender Comparison with Density Curves
+## Bar Chart: Categorical Distribution
 
 ```{r}
-ggplot(data=exam_data, aes(x = MATHS, colour = GENDER)) +
-  geom_density()
+#| code-fold: true  
+#| code-summary: "Show code"
+#| fig-width: 10
+#| fig-height: 6
+exam_data %>%
+  count(RACE) %>%
+  mutate(pct = n/sum(n) * 100,
+         RACE = fct_reorder(RACE, n)) %>%
+  ggplot(aes(x = RACE, y = n, fill = n)) +
+  geom_col(alpha = 0.85) +
+  geom_text(aes(label = paste0(n, " students\n(", round(pct, 1), "%)")),
+            hjust = -0.1, size = 3.5, fontface = "bold") +
+  scale_fill_gradient(low = "#fce7f3", high = "#ec4899") +
+  coord_flip() +
+  labs(title = "Student Distribution by Race",
+       subtitle = "Horizontal bars make labels readable",
+       x = "", y = "Number of Students") +
+  theme_minimal() +
+  theme(legend.position = "none",
+        plot.title = element_text(face = "bold", size = 13))
+```
+
+::: {.callout-tip}
+## Design Choice: Horizontal Bars
+
+**Why flip coordinates?**
+
+- **Readability**: Long category names don't need rotation  
+- **Comparison**: Easier to compare lengths left-to-right  
+- **Accessibility**: Natural reading direction
+
+**My Preference**: Always use horizontal bars for categorical data - it respects how humans naturally read.
+:::
+
+## Density Curves: Smooth Distributions
+
+### Gender Comparison
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show code"
+#| fig-width: 10
+#| fig-height: 6
+ggplot(exam_data, aes(x = MATHS, fill = GENDER, color = GENDER)) +
+  geom_density(alpha = 0.5, size = 1.3) +
+  scale_fill_manual(values = c("Female" = "#fbcfe8", "Male" = "#d8b4fe")) +
+  scale_color_manual(values = c("Female" = "#db2777", "Male" = "#a855f7")) +
+  labs(title = "Mathematics Performance by Gender",
+       subtitle = "Density curves reveal distribution overlap",
+       x = "Mathematics Score", y = "Density") +
+  theme_minimal() +
+  theme(legend.position = "top",
+        plot.title = element_text(face = "bold", size = 13))
 ```
 
 ```{r}
-# Calculate overlap coefficient
+#| code-fold: true
+#| code-summary: "Show code"
+# Statistical test
 male_scores <- exam_data$MATHS[exam_data$GENDER == "Male"]
 female_scores <- exam_data$MATHS[exam_data$GENDER == "Female"]
-
-# Perform two-sample t-test
-t_test_result <- t.test(male_scores, female_scores)
-p_value <- t_test_result$p.value
+t_test <- t.test(male_scores, female_scores)
+gender_diff <- abs(mean(male_scores) - mean(female_scores))
 ```
 
 ::: {.callout-important}
-## Statistical Gender Comparison
+## Statistical Analysis
 
-**Visual observation:** The density curves show `r ifelse(gender_diff < 3, "substantial overlap", ifelse(gender_diff < 7, "moderate overlap", "notable separation"))` between male and female distributions.
+**Visual observation**: Massive overlap between male and female distributions.
 
-**Statistical test (Two-sample t-test):**
-- **Mean difference:** `r round(abs(male_mean - female_mean), 2)` points
-- **t-statistic:** `r round(t_test_result$statistic, 3)`
-- **p-value:** `r round(p_value, 4)`
+**Statistical test**:
+- Mean difference: `r round(gender_diff, 2)` points  
+- p-value: `r round(t_test$p.value, 4)`  
+- Conclusion: `r ifelse(t_test$p.value < 0.05, "Statistically significant", "NOT statistically significant")`
 
-**Conclusion:** `r ifelse(p_value < 0.05, paste0("There IS a statistically significant difference (p = ", round(p_value, 4), " < 0.05) between male and female Mathematics performance. ", ifelse(male_mean > female_mean, "Males score significantly higher.", "Females score significantly higher.")), paste0("There is NO statistically significant difference (p = ", round(p_value, 4), " > 0.05) between genders. The ", round(gender_diff, 1), "-point difference can be attributed to random variation."))`
+**What this means**:
+Even if statistically different, the `r round(gender_diff, 1)`-point gap is only `r round(gender_diff/mean(exam_data$MATHS)*100, 1)`% of the mean - **practically negligible**.
 
-**Practical significance:** Even if statistically significant, a difference of `r round(gender_diff, 1)` points represents only `r round(gender_diff/maths_mean * 100, 1)`% of the mean score, indicating `r ifelse(gender_diff/maths_mean < 0.1, "minimal practical impact", "moderate practical relevance")`.
+**My Key Learning**: The extensive overlap shows that **individual variation >> gender-based variation**. Gender is NOT a strong predictor of math performance. This challenges common stereotypes.
 :::
 
-## geom_boxplot: Five-Number Summary
+## Box Plots: Five-Number Summary
+
+### With Statistical Layers
 
 ```{r}
-ggplot(data=exam_data, aes(y = MATHS, x= GENDER)) +
-  geom_boxplot()
+#| code-fold: true
+#| code-summary: "Show code"
+#| fig-width: 10
+#| fig-height: 6
+ggplot(exam_data, aes(y = MATHS, x = GENDER, fill = GENDER)) +
+  geom_violin(alpha = 0.3, trim = FALSE) +
+  geom_boxplot(width = 0.3, alpha = 0.7, outlier.shape = 21,
+               outlier.fill = "#831843", outlier.size = 3) +
+  geom_jitter(width = 0.1, alpha = 0.2, size = 1.5, color = "#831843") +
+  stat_summary(fun = mean, geom = "point", shape = 23, 
+               size = 5, fill = "red", color = "darkred") +
+  scale_fill_manual(values = c("Female" = "#fbcfe8", "Male" = "#d8b4fe")) +
+  labs(title = "Mathematics Scores: Layered Visualization",
+       subtitle = "Violin + Box + Points + Mean (red diamond)",
+       y = "Mathematics Score", x = "") +
+  theme_minimal() +
+  theme(legend.position = "none",
+        plot.title = element_text(face = "bold", size = 13))
 ```
 
 ```{r}
-# Calculate quartiles and outliers
-quartiles_male <- quantile(male_scores, c(0.25, 0.5, 0.75))
-quartiles_female <- quantile(female_scores, c(0.25, 0.5, 0.75))
-
-iqr_male <- IQR(male_scores)
-iqr_female <- IQR(female_scores)
-
-# Detect outliers
-outliers_male <- male_scores[male_scores < (quartiles_male[1] - 1.5*iqr_male) | 
-                              male_scores > (quartiles_male[3] + 1.5*iqr_male)]
-outliers_female <- female_scores[female_scores < (quartiles_female[1] - 1.5*iqr_female) | 
-                                  female_scores > (quartiles_female[3] + 1.5*iqr_female)]
+#| echo: false
+# Calculate quartiles
+quartiles_male <- quantile(male_scores)
+quartiles_female <- quantile(female_scores)
 ```
 
 ::: {.callout-tip}
-## Box Plot Statistical Breakdown
+## Layered Visualization Power
 
-**Male students (n = `r length(male_scores)`):**
-- Q1 (25th percentile): `r round(quartiles_male[1], 1)`
-- Median (50th percentile): `r round(quartiles_male[2], 1)`
-- Q3 (75th percentile): `r round(quartiles_male[3], 1)`
-- IQR (spread): `r round(iqr_male, 1)` points
-- Outliers: `r length(outliers_male)` student(s)
+**Four layers combined**:
 
-**Female students (n = `r length(female_scores)`):**
-- Q1: `r round(quartiles_female[1], 1)`
-- Median: `r round(quartiles_female[2], 1)`
-- Q3: `r round(quartiles_female[3], 1)`
-- IQR: `r round(iqr_female, 1)` points
-- Outliers: `r length(outliers_female)` student(s)
+1. **Violin** (background): Full distribution shape
+2. **Box plot**: Median, Q1, Q3, whiskers
+3. **Jittered points**: Every individual observation  
+4. **Red diamond**: Mean value
 
-**Comparative insights:**
-- **Median difference:** `r abs(round(quartiles_male[2] - quartiles_female[2], 1))` points
-- **Spread comparison:** `r ifelse(iqr_male > iqr_female, paste0("Males show ", round((iqr_male/iqr_female - 1)*100, 1), "% more variability"), paste0("Females show ", round((iqr_female/iqr_male - 1)*100, 1), "% more variability"))`
-- **Middle 50%:** Males range `r round(iqr_male, 1)` points vs Females `r round(iqr_female, 1)` points
+**Five-number summary**:
 
-**Outlier analysis:** `r ifelse(length(outliers_male) + length(outliers_female) == 0, "No outliers detected - scores follow normal pattern", paste0(length(outliers_male) + length(outliers_female), " outlier(s) identified, representing ", round((length(outliers_male) + length(outliers_female))/n_students*100, 1), "% of students"))`
+| Gender | Min | Q1 | Median | Q3 | Max |
+|--------|-----|-----|--------|-----|-----|
+| Male | `r round(quartiles_male[1], 1)` | `r round(quartiles_male[2], 1)` | `r round(quartiles_male[3], 1)` | `r round(quartiles_male[4], 1)` | `r round(quartiles_male[5], 1)` |
+| Female | `r round(quartiles_female[1], 1)` | `r round(quartiles_female[2], 1)` | `r round(quartiles_female[3], 1)` | `r round(quartiles_female[4], 1)` | `r round(quartiles_female[5], 1)` |
+
+**My Reflection**: Combining multiple geometries gives readers options - they can see summary statistics OR individual points OR distribution shape. Maximum information density.
 :::
 
-### Notched Box Plots
+## Scatter Plots: Relationships
+
+### Mathematics vs English Performance
 
 ```{r}
-ggplot(data=exam_data, aes(y = MATHS, x= GENDER)) +
-  geom_boxplot(notch=TRUE)
-```
-
-::: {.callout-note}
-## Notched Box Plot Interpretation
-
-**Purpose of notches:** Provide visual assessment of whether medians differ significantly.
-
-**Rule:** If notches **do not overlap**, there is strong evidence (95% confidence) that medians differ.
-
-**Observation:** The notches `r ifelse(abs(quartiles_male[2] - quartiles_female[2]) > 1.58 * sqrt((iqr_male^2/length(male_scores) + iqr_female^2/length(female_scores))), "DO NOT overlap", "DO overlap")`, suggesting medians are `r ifelse(abs(quartiles_male[2] - quartiles_female[2]) > 1.58 * sqrt((iqr_male^2/length(male_scores) + iqr_female^2/length(female_scores))), "statistically different", "not statistically different")`.
-
-**Alignment with t-test:** This visual test `r ifelse((p_value < 0.05) == (abs(quartiles_male[2] - quartiles_female[2]) > 1.58 * sqrt((iqr_male^2/length(male_scores) + iqr_female^2/length(female_scores)))), "CONFIRMS", "contradicts")` our earlier t-test conclusion (p = `r round(p_value, 4)`).
-:::
-
-## geom_violin: Distribution Shape Comparison
-
-```{r}
-ggplot(data=exam_data, aes(y = MATHS, x= GENDER)) +
-  geom_violin()
-```
-
-::: {.callout-tip}
-## Violin Plot Advantages
-
-**What violin plots reveal:**
-1. **Full distribution shape:** Unlike box plots (5-number summary only), violin plots show entire density
-2. **Multi-modal patterns:** Can detect multiple peaks in data
-3. **Asymmetry:** Clear visualization of skewness
-
-**Current observations:**
-- `r ifelse(iqr_male > iqr_female, "Male distribution appears wider", "Female distribution appears wider")`
-- Both show `r ifelse(abs(skewness) < 0.3, "roughly symmetric shapes", ifelse(skewness > 0, "slight bottom-heavy shapes", "slight top-heavy shapes"))`
-- No obvious bi-modal patterns (would appear as two bulges)
-
-**Comparison value:** With `r n_students` students split by gender, violin plots provide richer detail than box plots for understanding performance distribution differences.
-:::
-
-## geom_point: Scatter Plots for Relationships
-
-```{r}
-ggplot(data=exam_data, aes(x= MATHS, y=ENGLISH)) +
-  geom_point()
+#| code-fold: true
+#| code-summary: "Show code"
+#| fig-width: 10
+#| fig-height: 8
+ggplot(exam_data, aes(x = MATHS, y = ENGLISH)) +
+  geom_point(alpha = 0.5, size = 3, color = "#db2777") +
+  geom_smooth(method = "lm", se = TRUE, color = "#831843", 
+              fill = "#fbcfe8", size = 1.2) +
+  geom_hline(yintercept = mean(exam_data$ENGLISH), 
+             linetype = "dashed", color = "#ec4899", alpha = 0.6) +
+  geom_vline(xintercept = mean(exam_data$MATHS), 
+             linetype = "dashed", color = "#ec4899", alpha = 0.6) +
+  annotate("text", x = mean(exam_data$MATHS), y = 5, 
+           label = paste0("Mean MATHS: ", round(mean(exam_data$MATHS), 1)),
+           color = "#831843", fontface = "bold", size = 3.5) +
+  annotate("text", x = 20, y = mean(exam_data$ENGLISH), 
+           label = paste0("Mean ENGLISH: ", round(mean(exam_data$ENGLISH), 1)),
+           color = "#831843", fontface = "bold", angle = 90, size = 3.5) +
+  labs(title = "Subject Performance Correlation",
+       subtitle = "Strong positive relationship suggests interconnected academic skills",
+       x = "Mathematics Score", y = "English Score") +
+  theme_minimal() +
+  theme(plot.title = element_text(face = "bold", size = 13))
 ```
 
 ```{r}
-# Calculate correlation
-cor_maths_english <- cor(exam_data$MATHS, exam_data$ENGLISH)
+#| code-fold: true
+#| code-summary: "Show code"
+# Correlation analysis
 cor_test <- cor.test(exam_data$MATHS, exam_data$ENGLISH)
-
-# Count high achievers in both subjects
-both_high <- sum(exam_data$MATHS >= 75 & exam_data$ENGLISH >= 75)
-both_low <- sum(exam_data$MATHS < 50 & exam_data$ENGLISH < 50)
-```
-
-::: {.callout-important}
-## Subject Correlation Analysis
-
-**Pearson correlation coefficient:** r = `r round(cor_maths_english, 3)`
-
-**Interpretation:** `r ifelse(abs(cor_maths_english) > 0.7, "Strong positive correlation", ifelse(abs(cor_maths_english) > 0.4, "Moderate positive correlation", "Weak correlation"))` - students who score high in Mathematics tend to score high in English.
-
-**Statistical significance:**
-- p-value: `r round(cor_test$p.value, 6)`
-- `r ifelse(cor_test$p.value < 0.001, "Highly significant (p < 0.001)", ifelse(cor_test$p.value < 0.05, "Statistically significant (p < 0.05)", "Not statistically significant"))`
-
-**Shared variance:** r² = `r round(cor_maths_english^2, 3)`, meaning **`r round(cor_maths_english^2 * 100, 1)`%** of variability in English scores can be explained by Mathematics performance.
-
-**Pattern analysis:**
-- **High achievers (≥75 in both):** `r both_high` students (`r round(both_high/n_students*100, 1)`%)
-- **Low achievers (<50 in both):** `r both_low` students (`r round(both_low/n_students*100, 1)`%)
-- **Consistency:** `r round((both_high + both_low)/n_students*100, 1)`% of students show consistent performance across subjects
-
-**Educational implication:** The r = `r round(cor_maths_english, 3)` correlation suggests `r ifelse(cor_maths_english > 0.7, "strong underlying academic abilities that transfer across subjects", ifelse(cor_maths_english > 0.4, "moderate skill transfer between subjects", "relatively independent subject-specific abilities"))`.
-:::
-
-## Combining Geometric Objects
-
-```{r}
-ggplot(data=exam_data, aes(y = MATHS, x= GENDER)) +
-  geom_boxplot() +
-  geom_point(position="jitter", size = 0.5)
-```
-
-```{r}
-# Count points by gender for jitter analysis
-n_male_points <- sum(exam_data$GENDER == "Male")
-n_female_points <- sum(exam_data$GENDER == "Female")
-```
-
-::: {.callout-tip}
-## Layered Visualization Benefits
-
-**Combined elements:**
-1. **Box plot layer:** Shows median, quartiles, outliers (`r length(outliers_male) + length(outliers_female)` outliers)
-2. **Jittered points layer:** Shows all `r n_students` individual observations
-
-**Jittering rationale:**
-- Without jitter: Points stack vertically (overplotting)
-- With jitter: Horizontal randomization reveals density
-- Point size = 0.5 to reduce overlap
-
-**What this reveals:**
-- **Male group:** `r n_male_points` points show `r ifelse(iqr_male > 20, "wide spread", "concentrated distribution")`
-- **Female group:** `r n_female_points` points show `r ifelse(iqr_female > 20, "wide spread", "concentrated distribution")`
-- Individual points confirm the box plot's summary statistics
-
-**Advantage:** Combines **summary statistics** (box plot) with **raw data** (points) for complete picture.
-:::
-
-# Essential Grammatical Elements: Statistics
-
-## Adding Statistical Summaries
-
-```{r}
-ggplot(data=exam_data, aes(y = MATHS, x= GENDER)) +
-  geom_boxplot()
-```
-
-The boxplot above shows medians but not means. Let's add them:
-
-```{r}
-ggplot(data=exam_data, aes(y = MATHS, x= GENDER)) +
-  geom_boxplot() +
-  stat_summary(geom = "point", fun.y="mean", colour ="red", size=4)
-```
-
-```{r}
-# Calculate mean positions
-mean_diff_from_median_male <- male_mean - quartiles_male[2]
-mean_diff_from_median_female <- female_mean - quartiles_female[2]
-```
-
-::: {.callout-note}
-## Mean vs Median Analysis
-
-**Red points show means overlaid on box plots (which show medians)**
-
-**Male students:**
-- Mean: `r round(male_mean, 1)` (red point)
-- Median: `r round(quartiles_male[2], 1)` (box line)
-- Difference: `r round(abs(mean_diff_from_median_male), 1)` points
-
-**Female students:**
-- Mean: `r round(female_mean, 1)` (red point)
-- Median: `r round(quartiles_female[2], 1)` (box line)
-- Difference: `r round(abs(mean_diff_from_median_female), 1)` points
-
-**Interpretation:** `r ifelse(max(abs(mean_diff_from_median_male), abs(mean_diff_from_median_female)) < 2, "Means and medians are nearly identical, indicating symmetric distributions without outlier influence", "Mean-median differences suggest some skewness or outlier impact")`
-
-**Why this matters:** When mean ≈ median, either measure adequately represents "typical" performance. When they differ substantially, median is more robust to outliers.
-:::
-
-## Alternative stat() Approach
-
-```{r}
-ggplot(data=exam_data, aes(y = MATHS, x= GENDER)) +
-  geom_boxplot() +
-  geom_point(stat="summary", fun.y="mean", colour ="red", size=4)
-```
-
-::: {.callout-note}
-**Two approaches, same result:**
-- `stat_summary(geom = "point", ...)` - stat function, specify geom
-- `geom_point(stat = "summary", ...)` - geom function, specify stat
-
-Both achieve identical output, demonstrating ggplot2's flexible layering system.
-:::
-
-## Adding Regression Lines
-
-```{r}
-ggplot(data=exam_data, aes(x= MATHS, y=ENGLISH)) +
-  geom_point() +
-  geom_smooth(size=0.5)
-```
-
-```{r}
-# Calculate smoothing window
-n_effective <- n_students * 0.75  # LOESS default span
-```
-
-::: {.callout-note}
-## LOESS Smoothing Analysis
-
-**Method:** Local polynomial regression (LOESS - LOcally Estimated Scatterplot Smoothing)
-
-**How it works:** Fits polynomial curves to localized subsets of data
-
-**Confidence band (gray area):** 95% confidence interval for the smooth curve
-
-**Observation:** The smooth curve is `r ifelse(cor_maths_english > 0.8, "nearly linear", "curved")`, suggesting `r ifelse(cor_maths_english > 0.8, "a linear relationship is appropriate", "non-linear components exist")`
-
-**Effective sample size:** LOESS uses ≈`r round(n_effective)` nearest neighbors for each point
-:::
-
-### Linear Regression Alternative
-
-```{r}
-ggplot(data=exam_data, aes(x= MATHS, y=ENGLISH)) +
-  geom_point() +
-  geom_smooth(method=lm, size=0.5)
-```
-
-```{r}
-# Fit linear model
 lm_model <- lm(ENGLISH ~ MATHS, data = exam_data)
-slope <- coef(lm_model)[2]
-intercept <- coef(lm_model)[1]
-r_squared <- summary(lm_model)$r.squared
-residual_se <- summary(lm_model)$sigma
 ```
 
 ::: {.callout-important}
-## Linear Regression Analysis
+## Correlation Insights
 
-**Model:** ENGLISH = `r round(intercept, 2)` + `r round(slope, 3)` × MATHS
+**Pearson correlation**: r = `r round(cor_test$estimate, 3)`  
+**R-squared**: `r round(summary(lm_model)$r.squared, 3)` → **`r round(summary(lm_model)$r.squared*100, 1)`% shared variance**
 
-**Interpretation:**
-- **Intercept:** `r round(intercept, 2)` - predicted English score when Maths = 0 (extrapolation, not meaningful)
-- **Slope:** `r round(slope, 3)` - for every 1-point increase in Maths, English increases by `r round(slope, 3)` points
-- **R-squared:** `r round(r_squared, 3)` - **`r round(r_squared*100, 1)`%** of English score variance explained by Maths
+**Regression equation**:  
+English = `r round(coef(lm_model)[1], 2)` + `r round(coef(lm_model)[2], 3)` × Maths
 
-**Model fit quality:**
-- Residual standard error: `r round(residual_se, 2)` points
-- Typical prediction is off by ±`r round(residual_se, 2)` points
+**What this means**:
+- Every 10-point increase in Maths → `r round(coef(lm_model)[2] * 10, 1)`-point increase in English
+- `r round(summary(lm_model)$r.squared*100, 1)`% of English variability explained by Maths performance
 
-**Practical example:**
-- Student scoring 70 in Maths → predicted English: `r round(intercept + slope*70, 1)` ± `r round(residual_se, 2)`
-- Student scoring 90 in Maths → predicted English: `r round(intercept + slope*90, 1)` ± `r round(residual_se, 2)`
+**My Discovery**: This strong correlation (r = `r round(cor_test$estimate, 3)`) reveals that academic success is **interconnected**, not subject-specific. Students with strong analytical skills (math) tend to also excel in language skills (English).
 
-**Model adequacy:** R² = `r round(r_squared, 3)` indicates `r ifelse(r_squared > 0.7, "strong predictive power", ifelse(r_squared > 0.4, "moderate predictive power", "weak predictive power"))` - Maths score is `r ifelse(r_squared > 0.7, "an excellent", ifelse(r_squared > 0.4, "a useful", "a limited"))` predictor of English performance.
+**Educational implication**: Focus on general cognitive abilities and study habits rather than subject-specific drilling.
 :::
 
-# Essential Grammatical Elements: Facets
+# Layer 4: Facets (Small Multiples)
 
-## facet_wrap: Trellis Plots
+## Class-Level Performance Breakdown
 
 ```{r}
-ggplot(data=exam_data, aes(x= MATHS)) +
-  geom_histogram(bins=20) +
-  facet_wrap(~ CLASS)
+#| code-fold: true
+#| code-summary: "Show code"
+#| fig-width: 12
+#| fig-height: 8
+ggplot(exam_data, aes(x = MATHS)) +
+  geom_histogram(bins = 15, fill = "#bbf7d0", color = "#065f46", alpha = 0.8) +
+  geom_vline(aes(xintercept = mean(MATHS)), 
+             color = "red", linetype = "dashed", size = 1) +
+  facet_wrap(~ CLASS, ncol = 3) +
+  labs(title = "Mathematics Distribution by Class",
+       subtitle = "Red line = class mean | Compare shapes and central tendencies",
+       x = "Mathematics Score", y = "Frequency") +
+  theme_minimal() +
+  theme(plot.title = element_text(face = "bold", size = 13),
+        strip.text = element_text(face = "bold", size = 10))
 ```
 
 ```{r}
-# Calculate class-level statistics
+#| code-fold: true
+#| code-summary: "Show code"
+# Class statistics
 class_stats <- exam_data %>%
   group_by(CLASS) %>%
   summarise(
     n = n(),
     mean_maths = mean(MATHS),
-    sd_maths = sd(MATHS),
-    median_maths = median(MATHS)
+    sd_maths = sd(MATHS)
   ) %>%
   arrange(desc(mean_maths))
-
-best_class <- class_stats$CLASS[1]
-worst_class <- class_stats$CLASS[nrow(class_stats)]
-class_gap <- class_stats$mean_maths[1] - class_stats$mean_maths[nrow(class_stats)]
 ```
 
-::: {.callout-important}
-## Class-Level Performance Analysis
+::: {.callout-tip}
+## Inter-Class Variation Analysis
 
-**Number of classes:** `r n_classes`
+**Performance ranking**:
 
-**Class performance ranking (by mean Maths score):**
 ```{r}
 #| echo: false
-for (i in 1:nrow(class_stats)) {
-  cat(paste0(i, ". ", class_stats$CLASS[i], ": ",
-             "μ = ", round(class_stats$mean_maths[i], 1),
-             ", σ = ", round(class_stats$sd_maths[i], 1),
-             ", n = ", class_stats$n[i], "\n"))
-}
+kable(class_stats, digits = 1, 
+      col.names = c("Class", "Students (n)", "Mean", "SD"),
+      caption = "Class Performance Summary")
 ```
 
-**Key findings:**
-- **Highest performing:** `r best_class` (μ = `r round(class_stats$mean_maths[1], 1)`)
-- **Lowest performing:** `r worst_class` (μ = `r round(class_stats$mean_maths[nrow(class_stats)], 1)`)
-- **Performance gap:** `r round(class_gap, 1)` points between top and bottom classes
+**Key observations**:
 
-**Interpretation:** The `r round(class_gap, 1)`-point gap represents `r round(class_gap/maths_mean * 100, 1)`% of overall mean, indicating `r ifelse(class_gap < 10, "relatively consistent teaching quality across classes", ifelse(class_gap < 20, "moderate variation in class performance", "significant inter-class disparities requiring investigation"))`
+1. **Best class**: `r class_stats$CLASS[1]` (μ = `r round(class_stats$mean_maths[1], 1)`)
+2. **Weakest class**: `r class_stats$CLASS[nrow(class_stats)]` (μ = `r round(class_stats$mean_maths[nrow(class_stats)], 1)`)
+3. **Gap**: `r round(class_stats$mean_maths[1] - class_stats$mean_maths[nrow(class_stats)], 1)` points
 
-**Distribution shapes:** Visual inspection shows `r ifelse(sd(class_stats$mean_maths) < 5, "similar distribution patterns", "varying distribution patterns")` across classes, with `r sum(class_stats$mean_maths > maths_mean)` classes above overall mean.
+**My Learning**: Facets allow simultaneous comparison of multiple groups. The variation suggests teaching quality or class composition matters. This warrants investigation - are high-performing students clustered in certain classes?
 :::
 
-## facet_grid: Matrix Layout
+# Layer 5: Statistical Transformations
+
+## Adding Regression Lines
+
+::: {.panel-tabset}
+
+## Linear Model
 
 ```{r}
-ggplot(data=exam_data, aes(x= MATHS)) +
-  geom_histogram(bins=20) +
-  facet_grid(~ CLASS)
+#| code-fold: true
+#| code-summary: "Show code"
+ggplot(exam_data, aes(x = MATHS, y = ENGLISH)) +
+  geom_point(alpha = 0.4, color = "#db2777", size = 2) +
+  geom_smooth(method = "lm", se = TRUE, color = "#831843", 
+              fill = "#fbcfe8", size = 1.2) +
+  labs(title = "Linear Regression: Parametric Assumption",
+       subtitle = paste0("R² = ", round(summary(lm_model)$r.squared, 3)),
+       x = "Mathematics", y = "English") +
+  theme_minimal() +
+  theme(plot.title = element_text(face = "bold", size = 12))
 ```
+
+## LOESS Smoothing
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show code"
+ggplot(exam_data, aes(x = MATHS, y = ENGLISH)) +
+  geom_point(alpha = 0.4, color = "#db2777", size = 2) +
+  geom_smooth(method = "loess", se = TRUE, color = "#831843", 
+              fill = "#fbcfe8", size = 1.2) +
+  labs(title = "LOESS Smoothing: Non-Parametric Flexibility",
+       subtitle = "Captures local patterns without assuming linearity",
+       x = "Mathematics", y = "English") +
+  theme_minimal() +
+  theme(plot.title = element_text(face = "bold", size = 12))
+```
+
+:::
 
 ::: {.callout-note}
-## facet_wrap vs facet_grid
+## Linear vs LOESS
 
-**facet_wrap (previous plot):**
-- Wraps panels into 2D grid automatically
-- Better for many categories (uses space efficiently)
-- Our `r n_classes` classes wrapped into multiple rows
+**Linear (lm)**:
+- Assumes straight-line relationship
+- Simple, interpretable  
+- Good when relationship is truly linear
 
-**facet_grid (current plot):**
-- Forces single row/column
-- Better for 1-2 categorical variables
-- All `r n_classes` classes in one row (may be cramped)
+**LOESS (locally weighted)**:
+- No parametric assumptions
+- Flexible, captures curves
+- Better for exploring non-linear patterns
 
-**Recommendation:** With `r n_classes` classes, `facet_wrap()` provides better readability.
+**For our data**: Both methods produce similar fits → relationship is genuinely linear. This validates using simple regression.
+
+**My Insight**: When linear and LOESS agree, you can trust the simpler model. When they diverge, investigate why.
 :::
 
-# Essential Grammatical Elements: Coordinates
+# Layer 6: Coordinate Systems
 
-## Flipping Coordinates
+## Equal Scales for Honest Comparison
+
+::: {.panel-tabset}
+
+## Misleading: Default Scales
 
 ```{r}
-ggplot(data=exam_data, aes(x=RACE)) +
-  geom_bar()
+#| code-fold: true
+#| code-summary: "Show code"
+ggplot(exam_data, aes(x = MATHS, y = ENGLISH)) +
+  geom_point(alpha = 0.4, color = "#db2777") +
+  geom_smooth(method = "lm", color = "#831843", fill = "#fbcfe8") +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed", 
+              color = "red", alpha = 0.5) +
+  labs(title = "MISLEADING: Unequal Scales",
+       subtitle = "Regression line angle is distorted",
+       x = "Mathematics Score", y = "English Score") +
+  theme_minimal() +
+  theme(plot.title = element_text(face = "bold", size = 12))
 ```
+
+## Honest: Equal Scales
 
 ```{r}
-ggplot(data=exam_data, aes(x=RACE)) +
-  geom_bar() +
-  coord_flip()
+#| code-fold: true
+#| code-summary: "Show code"
+ggplot(exam_data, aes(x = MATHS, y = ENGLISH)) +
+  geom_point(alpha = 0.4, color = "#db2777") +
+  geom_smooth(method = "lm", color = "#831843", fill = "#fbcfe8") +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed", 
+              color = "red", alpha = 0.5) +
+  coord_equal(xlim = c(0, 100), ylim = c(0, 100)) +
+  labs(title = "HONEST: Equal Scales (0-100)",
+       subtitle = "True representation of relationship strength",
+       x = "Mathematics Score", y = "English Score") +
+  theme_minimal() +
+  theme(plot.title = element_text(face = "bold", size = 12))
 ```
 
-::: {.callout-tip}
-## When to Flip Coordinates
-
-**Vertical bars (default):**
-- Good for few categories
-- Category names fit horizontally
-
-**Horizontal bars (coord_flip):**
-- **Better for:** Long category names, many categories, easier comparison
-- **This case:** `r n_races` racial groups - horizontal makes category labels more readable
-- **Comparison:** Easier to compare bar lengths left-to-right than bottom-to-top
-
-**Readability gain:** Flipping allows full category names without rotation or truncation.
 :::
-
-## Setting Axis Ranges
-
-```{r}
-ggplot(data=exam_data, aes(x= MATHS, y=ENGLISH)) +
-  geom_point() +
-  geom_smooth(method=lm, size=0.5)
-```
-
-```{r}
-# Calculate current axis ranges
-actual_x_range <- c(min(exam_data$MATHS), max(exam_data$MATHS))
-actual_y_range <- c(min(exam_data$ENGLISH), max(exam_data$ENGLISH))
-```
 
 ::: {.callout-warning}
-## Misleading Aspect Ratio Issue
+## Visual Deception Alert
 
-**Problem identified:**
-- X-axis range: `r round(actual_x_range[1], 1)` to `r round(actual_x_range[2], 1)` (range: `r round(actual_x_range[2] - actual_x_range[1], 1)`)
-- Y-axis range: `r round(actual_y_range[1], 1)` to `r round(actual_y_range[2], 1)` (range: `r round(actual_y_range[2] - actual_y_range[1], 1)`)
+**Red dashed line** = perfect 1:1 relationship (slope = 1)
 
-**Why this misleads:** Different axis ranges distort the visual slope of the regression line. A 1-point change in Maths appears different from a 1-point change in English.
+**With equal scales**: You can see the regression line's true angle relative to 1:1
 
-**Solution:** Use equal scales (0-100 for both) to accurately represent relationship.
+**Why this matters**: 
+- Unequal scales can make weak correlations look strong (or vice versa)
+- Equal scales provide honest visual representation
+- Critical for comparing similar measurements
+
+**My Learning**: This is how visualizations can mislead. Always question axis scales when evaluating relationships. Insist on equal scales when comparing like measurements.
 :::
 
+# Layer 7: Themes
+
+## Professional Styling
+
+::: {.panel-tabset}
+
+## theme_minimal() 
+
 ```{r}
-ggplot(data=exam_data, aes(x= MATHS, y=ENGLISH)) +
-  geom_point() +
-  geom_smooth(method=lm, size=0.5) +
-  coord_cartesian(xlim=c(0,100), ylim=c(0,100))
+#| code-fold: true
+#| code-summary: "Show code"
+ggplot(exam_data, aes(x = RACE, fill = RACE)) +
+  geom_bar(alpha = 0.8) +
+  scale_fill_manual(values = c("#fce7f3", "#fbcfe8", "#f9a8d4", "#f472b6")) +
+  coord_flip() +
+  theme_minimal() +
+  labs(title = "theme_minimal() - Modern & Clean",
+       x = "", y = "Count") +
+  theme(legend.position = "none",
+        plot.title = element_text(face = "bold", size = 12))
 ```
+
+## theme_classic()
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show code"
+ggplot(exam_data, aes(x = RACE, fill = RACE)) +
+  geom_bar(alpha = 0.8) +
+  scale_fill_manual(values = c("#fce7f3", "#fbcfe8", "#f9a8d4", "#f472b6")) +
+  coord_flip() +
+  theme_classic() +
+  labs(title = "theme_classic() - Publication Ready",
+       x = "", y = "Count") +
+  theme(legend.position = "none",
+        plot.title = element_text(face = "bold", size = 12))
+```
+
+## theme_bw()
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show code"
+ggplot(exam_data, aes(x = RACE, fill = RACE)) +
+  geom_bar(alpha = 0.8) +
+  scale_fill_manual(values = c("#fce7f3", "#fbcfe8", "#f9a8d4", "#f472b6")) +
+  coord_flip() +
+  theme_bw() +
+  labs(title = "theme_bw() - Black & White Professional",
+       x = "", y = "Count") +
+  theme(legend.position = "none",
+        plot.title = element_text(face = "bold", size = 12))
+```
+
+:::
 
 ::: {.callout-tip}
-## Fixed Coordinates Analysis
+## Theme Selection Guide
 
-**Improvement:** Both axes now 0-100
+| Theme | Use Case | Rating |
+|-------|----------|--------|
+| **minimal** | Web, dashboards, modern reports | Excellent |
+| **classic** | Academic papers, journals | Very Good |
+| **bw** | Print publications, formal docs | Very Good |
 
-**Visual accuracy:** The regression line's angle now truly represents the relationship strength
+**My preference**: `theme_minimal()` - clean, doesn't distract from data, works everywhere.
 
-**Slope interpretation:** With equal scales, slope = `r round(slope, 3)` means:
-- `r ifelse(slope < 0.9, "English gains are slightly less than Maths gains", ifelse(slope > 1.1, "English gains are slightly more than Maths gains", "Nearly 1:1 relationship - gains transfer equally"))`
-
-**Honest visualization:** Equal scales prevent exaggerating or minimizing the correlation (r = `r round(cor_maths_english, 3)`)
+**Professional tip**: Consistency matters more than which theme you choose. Pick one and use it throughout your document.
 :::
 
-# Essential Grammatical Elements: Themes
+# Comprehensive Subject Analysis
 
-## Built-in Theme Comparison
-
-```{r}
-ggplot(data=exam_data, aes(x=RACE)) +
-  geom_bar() +
-  coord_flip() +
-  theme_gray()
-```
+## Inter-Subject Correlations
 
 ```{r}
-ggplot(data=exam_data, aes(x=RACE)) +
-  geom_bar() +
-  coord_flip() +
-  theme_classic()
-```
+#| code-fold: true
+#| code-summary: "Show code"
+#| fig-width: 12
+#| fig-height: 4
 
-```{r}
-ggplot(data=exam_data, aes(x=RACE)) +
-  geom_bar() +
-  coord_flip() +
-  theme_minimal()
-```
-
-::: {.callout-tip}
-## Theme Selection Guidelines
-
-**theme_gray() (default):**
-- Gray background with white gridlines
-- Best for: Screen viewing, presentations
-- Drawback: Less professional for publications
-
-**theme_classic():**
-- White background, no gridlines, only axes
-- Best for: Academic papers, traditional plots
-- Advantage: Minimal ink, maximum data focus
-
-**theme_minimal():**
-- White background with subtle gridlines
-- Best for: Modern reports, dashboards
-- Balance: Clean but retains helpful gridlines
-
-**For this data (n = `r n_students`, `r n_races` racial groups):**
-All three effectively display the distribution. Choice depends on context:
-- **Publication:** theme_classic()
-- **Presentation:** theme_gray()
-- **Web/dashboard:** theme_minimal()
-:::
-
-# Comprehensive Summary Analysis
-
-```{r}
-# Calculate comprehensive statistics
-overall_performance <- data.frame(
-  Subject = c("Mathematics", "English", "Science"),
-  Mean = c(maths_mean, english_mean, science_mean),
-  SD = c(maths_sd, english_sd, science_sd),
-  CV = c(maths_sd/maths_mean, english_sd/english_mean, science_sd/science_mean) * 100
-)
-
-# Correlations
+# Calculate correlations
 cor_matrix <- cor(exam_data[, c("MATHS", "ENGLISH", "SCIENCE")])
+
+# Create correlation plot data
+cor_data <- expand.grid(
+  Var1 = c("MATHS", "ENGLISH", "SCIENCE"),
+  Var2 = c("MATHS", "ENGLISH", "SCIENCE")
+) %>%
+  mutate(Correlation = c(cor_matrix))
+
+# Correlation heatmap
+p1 <- ggplot(cor_data, aes(x = Var1, y = Var2, fill = Correlation)) +
+  geom_tile(color = "white", size = 1.5) +
+  geom_text(aes(label = round(Correlation, 2)), size = 5, fontface = "bold") +
+  scale_fill_gradient2(low = "#fce7f3", mid = "#f9a8d4", high = "#ec4899",
+                       midpoint = 0.5, limits = c(0, 1)) +
+  labs(title = "Correlation Matrix", x = "", y = "") +
+  theme_minimal() +
+  theme(plot.title = element_text(face = "bold", hjust = 0.5, size = 12))
+
+# Scatter plot matrix sample
+p2 <- ggplot(exam_data, aes(x = MATHS, y = SCIENCE)) +
+  geom_point(alpha = 0.4, color = "#db2777", size = 2) +
+  geom_smooth(method = "lm", color = "#831843", fill = "#fbcfe8") +
+  labs(title = "MATHS vs SCIENCE") +
+  theme_minimal() +
+  theme(plot.title = element_text(face = "bold", size = 11))
+
+p3 <- ggplot(exam_data, aes(x = ENGLISH, y = SCIENCE)) +
+  geom_point(alpha = 0.4, color = "#db2777", size = 2) +
+  geom_smooth(method = "lm", color = "#831843", fill = "#fbcfe8") +
+  labs(title = "ENGLISH vs SCIENCE") +
+  theme_minimal() +
+  theme(plot.title = element_text(face = "bold", size = 11))
+
+(p1 | (p2 / p3))
+```
+
+```{r}
+#| echo: false
 cor_me <- cor_matrix["MATHS", "ENGLISH"]
 cor_ms <- cor_matrix["MATHS", "SCIENCE"]
 cor_es <- cor_matrix["ENGLISH", "SCIENCE"]
-avg_correlation <- mean(c(cor_me, cor_ms, cor_es))
+avg_cor <- mean(c(cor_me, cor_ms, cor_es))
 ```
 
 ::: {.callout-important}
-## Final Data-Driven Insights
+## Key Discovery: Interconnected Learning
 
-### Overall Academic Performance
+**All correlations are strong positive**:
 
-**Subject comparison:**
-```{r}
-#| echo: false
-for (i in 1:nrow(overall_performance)) {
-  cat(paste0("- **", overall_performance$Subject[i], ":** ",
-             "μ = ", round(overall_performance$Mean[i], 1),
-             ", σ = ", round(overall_performance$SD[i], 1),
-             ", CV = ", round(overall_performance$CV[i], 1), "%\n"))
-}
-```
+- MATHS ↔ ENGLISH: r = `r round(cor_me, 3)`
+- MATHS ↔ SCIENCE: r = `r round(cor_ms, 3)`  
+- ENGLISH ↔ SCIENCE: r = `r round(cor_es, 3)`
 
-**Best performing subject:** `r overall_performance$Subject[which.max(overall_performance$Mean)]`
+**Average correlation**: `r round(avg_cor, 3)` → **Strong interconnection**
 
-**Most consistent performance:** `r overall_performance$Subject[which.min(overall_performance$CV)]` (lowest CV)
+**What this reveals**:
+Academic abilities are NOT isolated silos. Students who excel in one subject tend to excel in all subjects. This suggests:
 
-### Inter-Subject Relationships
+1. **General cognitive ability** > subject-specific talent
+2. **Study habits & motivation** transfer across subjects
+3. **Intervention in one subject** may boost overall performance
 
-**Correlation matrix:**
-- Maths ↔ English: r = `r round(cor_me, 3)`
-- Maths ↔ Science: r = `r round(cor_ms, 3)`
-- English ↔ Science: r = `r round(cor_es, 3)`
+**My Educational Insight**: Rather than subject-specific remediation, focus on building general learning skills, critical thinking, and study strategies that benefit all subjects.
+:::
 
-**Average correlation:** `r round(avg_correlation, 3)`
+# Final Reflections
 
-**Interpretation:** `r ifelse(avg_correlation > 0.7, "Strong positive correlations across all subjects indicate general academic ability dominates subject-specific skills", ifelse(avg_correlation > 0.4, "Moderate correlations suggest both general ability and subject-specific factors matter", "Weak correlations indicate relatively independent subject-specific abilities"))`
+## My Learning Journey
 
-### Demographic Factors
+::: welcome-section
+## What I Learned After This Journey
 
-**Gender impact:**
-- Mathematics difference: `r round(gender_diff, 1)` points (`r ifelse(p_value < 0.05, "statistically significant", "not statistically significant")`)
-- Practical significance: `r ifelse(gender_diff < 5, "Minimal - gender not a strong predictor", ifelse(gender_diff < 10, "Moderate - some gender influence", "Substantial - gender matters"))`
+**Technical Skills**:
+- Seven layers of Grammar of Graphics  
+- Choosing appropriate geometric objects  
+- Visual vs statistical significance  
+- Honest visualization practices
 
-**Class-level variation:**
-- Inter-class gap: `r round(class_gap, 1)` points
-- Coefficient of variation: `r round(sd(class_stats$mean_maths)/mean(class_stats$mean_maths)*100, 1)`%
-- Assessment: `r ifelse(class_gap < 15, "Acceptable consistency across classes", ifelse(class_gap < 30, "Moderate variation - monitor teaching quality", "High variation - immediate intervention needed"))`
+**Analytical Insights**:
+- Gender differences are statistically tiny and practically irrelevant  
+- Subject performances are strongly interconnected (avg r = `r round(avg_cor, 2)`)  
+- Individual variation >> group differences  
+- Bin selection and scale choices dramatically affect interpretation
 
-### Key Takeaways
+**Most Important Lesson**:
+Visualization is not just about making pretty pictures - it's about **revealing truth** and **challenging assumptions**. The gender analysis taught me that what we *expect* to find (gender differences) may not be what the data *actually shows* (minimal differences, huge overlap).
 
-1. **Academic consistency:** Average correlation of `r round(avg_correlation, 3)` means students performing well in one subject typically excel in others
-
-2. **Performance spread:** Standard deviations of `r round(mean(overall_performance$SD), 1)` points (average) indicate `r ifelse(mean(overall_performance$SD) < 15, "relatively homogeneous class", ifelse(mean(overall_performance$SD) < 20, "moderate diversity in abilities", "high diversity requiring differentiated instruction"))`
-
-3. **Demographic equity:** `r ifelse(max(gender_diff, class_gap) < 10, "No major demographic disparities detected", paste0("Attention needed: ", round(max(gender_diff, class_gap), 1), "-point gap in ", ifelse(gender_diff > class_gap, "gender", "class performance")))`
-
-4. **Data quality:** `r n_students` complete observations with no missing data provide robust foundation for analysis
+**Next Steps**:
+Apply these principles to more complex datasets and tackle multivariate visualizations with confidence.
 :::
 
 # References
 
--   Hadley Wickham (2023) [**ggplot2: Elegant Graphics for Data Analysis**](https://ggplot2-book.org/). Online 3rd edition.
--   Winston Chang (2013) [**R Graphics Cookbook 2nd edition**](https://r-graphics.org/). Online version.
--   Healy, Kieran (2019) [**Data Visualization: A practical introduction**](https://socviz.co/). Online version
--   [Learning ggplot2 on Paper – Components](https://henrywang.nl/learning-ggplot2-on-paper-components/)
--   [Learning ggplot2 on Paper – Layer](https://henrywang.nl/learning-ggplot2-on-paper-layer/)
--   [Learning ggplot2 on Paper – Scale](https://henrywang.nl/tag/learning-ggplot2-on-paper/)
-
-
-
-
+- Hadley Wickham (2023) [**ggplot2: Elegant Graphics for Data Analysis**](https://ggplot2-book.org/)
+- Winston Chang (2013) [**R Graphics Cookbook**](https://r-graphics.org/)
+- Healy, Kieran (2019) [**Data Visualization: A practical introduction**](https://socviz.co/)

@@ -51,6 +51,24 @@ In this website, you will find my coursework. Materials here are based on <a hre
 
 </a>
 ::::::
+
+:::::: card
+<a href="Hands-on_Ex/Hands-on_Ex03/Hands-on_Ex03.html">
+
+::: card-image
+<img src="images/ex3-preview.png" alt="Exercise 3 preview"/>
+:::
+
+:::: card-content
+<h3>Hands-on Exercise 3 - Interactive Data Visualisation - ggiraph methods</h3>
+
+::: card-footer
+[Thi Thanh Van Tran]{.author} [Apr 26, 2026]{.date}
+:::
+::::
+
+</a>
+::::::
 :::::::::::
 
 # In-class Exercise
