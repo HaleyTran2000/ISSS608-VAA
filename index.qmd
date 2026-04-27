@@ -53,14 +53,32 @@ In this website, you will find my coursework. Materials here are based on <a hre
 ::::::
 
 :::::: card
-<a href="Hands-on_Ex/Hands-on_Ex03/Hands-on_Ex03.html">
+<a href="Hands-on_Ex/Hands-on_Ex03/Hands-on_Ex03a.html">
 
 ::: card-image
 <img src="images/ex3-preview.png" alt="Exercise 3 preview"/>
 :::
 
 :::: card-content
-<h3>Hands-on Exercise 3 - Interactive Data Visualisation - ggiraph methods</h3>
+<h3>Hands-on Exercise 3a - Interactive Data Visualisation - ggiraph methods</h3>
+
+::: card-footer
+[Thi Thanh Van Tran]{.author} [Apr 26, 2026]{.date}
+:::
+::::
+
+</a>
+::::::
+
+:::::: card
+<a href="Hands-on_Ex/Hands-on_Ex03/Hands-on_Ex03b.html">
+
+::: card-image
+<img src="images/ex3-preview.png" alt="Exercise 3 preview"/>
+:::
+
+:::: card-content
+<h3>Hands-on Exercise 3b - Interactive Data Visualisation - ggiraph methods</h3>
 
 ::: card-footer
 [Thi Thanh Van Tran]{.author} [Apr 26, 2026]{.date}
@@ -83,6 +101,23 @@ In this website, you will find my coursework. Materials here are based on <a hre
 
 :::: card-content
 <h3>Analysing Superstore dataset</h3>
+
+::: card-footer
+[Thi Thanh Van Tran]{.author} [Apr 18, 2026]{.date}
+:::
+::::
+
+</a>
+::::::
+:::::: card
+<a href="In_class_Ex/In_class_Ex02/In_class_Ex02.html">
+
+::: card-image
+<img src="images/inclass_ex2_preview.png" alt="In-class Exercise 2 preview"/>
+:::
+
+:::: card-content
+<h3>Analyzed Superstore data and built Tableau dashboards</h3>
 
 ::: card-footer
 [Thi Thanh Van Tran]{.author} [Apr 18, 2026]{.date}
