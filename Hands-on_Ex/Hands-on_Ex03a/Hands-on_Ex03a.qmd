@@ -1,6 +1,6 @@
 ---
-title: "Hands-on Exercise 3"
-subtitle: "Interactive Data Visualisation — ggiraph & plotly"
+title: "Hands-on Exercise 3a"
+subtitle: "Interactive Data Visualisation — ggiraph, plotly & crosstalk"
 author: "Thi Thanh Van Tran"
 date: "April 22, 2026"
 date-modified: "April 22, 2026"
@@ -9,7 +9,7 @@ format:
     toc: true
     number-sections: true
     number-depth: 4
-    code-fold: false
+    code-fold: true
     code-summary: "Show code"
     code-tools: false
     code-copy: true
@@ -36,56 +36,82 @@ knitr:
 
 Welcome! This hands-on exercise covers **three complementary tools** for interactive visualisation in R:
 
-1. **ggiraph** — extends ggplot2 with hover tooltips, data\_id linking, and onclick actions
+1. **ggiraph** — extends ggplot2 with hover tooltips, `data_id` linking, and `onclick` actions
 2. **plotly** — full-featured interactive charts via `plot_ly()` and `ggplotly()`
 3. **crosstalk** — cross-widget interactions linking plots to interactive tables
 :::
 
 ---
 
-# Getting Started
+## Learning Outcome {#learning-outcome}
 
-## Installing Packages
+In this hands-on exercise, you will learn how to create interactive data visualisations by using functions provided by the **ggiraph** and **plotly** packages. Specifically, we will explore:
 
-The code chunk below uses `pacman::p_load()` to check, install and launch all required packages in one step.
+- How to add hover tooltips to ggplot2 charts using `geom_*_interactive()`
+- How to link multiple charts with shared `data_id` keys for coordinated highlighting
+- How to deploy `onclick` actions that open external URLs from chart elements
+- How to convert ggplot2 objects to interactive plotly widgets with `ggplotly()`
+- How to build linked brushing dashboards using the crosstalk SharedData pattern
+
+---
+
+## Getting Started {#getting-started}
+
+First, check, install and launch the following R packages:
+
+| Package | Purpose |
+|---------|---------|
+| **ggiraph** | Makes ggplot2 graphics interactive via tooltip, data\_id and onclick |
+| **plotly** | Interactive web graphics via `plot_ly()` and `ggplotly()` |
+| **DT** | R interface to JavaScript DataTables for interactive HTML tables |
+| **tidyverse** | Modern R packages for data science (ggplot2, dplyr, readr, etc.) |
+| **patchwork** | Combines multiple ggplot2 graphs; enables coordinated ggiraph views |
+| **readxl** | Imports Excel workbooks |
+| **viridis** | Perceptually uniform colour palettes |
+| **scales** | Formatting helpers for axis labels and tooltips |
+| **crosstalk** | Cross-widget linked brushing and filtering between htmlwidgets |
 
 ```{r}
-#| code-fold: false
+#| label: load-packages
 pacman::p_load(ggiraph, plotly, DT, tidyverse, readxl,
-               knitr, patchwork, viridis, scales, crosstalk)
+               patchwork, viridis, scales, crosstalk)
 ```
 
-Packages used:
+::: {.callout-note}
+## What I Learned
+`pacman::p_load()` installs any missing package before loading — one line replaces multiple `install.packages()` + `library()` calls. This keeps setup code portable across machines without manual dependency management.
+:::
 
-- **ggiraph** — makes ggplot2 graphics interactive via tooltip, data\_id, and onclick aesthetics
-- **plotly** — creates interactive web graphics from ggplot2 or via its own `plot_ly()` interface
-- **DT** — wraps the JavaScript DataTables library for interactive HTML tables
-- **tidyverse** — modern R packages for data science (includes ggplot2, dplyr, readr)
-- **patchwork** — combines multiple ggplot2 graphs; used inside `girafe()` for coordinated views
-- **crosstalk** — enables cross-widget interactions (linked brushing and filtering) between htmlwidgets
-- **readxl**, **viridis**, **scales** — supporting utilities for data import and visual styling
+---
 
-## Importing Data
+## Importing Data {#importing-data}
+
+The *Data* worksheet from the *GlobalPopulation* Excel workbook is used throughout this exercise. It contains country-level demographic records including: `Country`, `Continent`, `Year`, `Population`, `Young` (% young-age population) and `Old` (% elderly population).
 
 ```{r}
-#| code-fold: false
+#| label: import-data
 pop_data <- read_xls("data/GlobalPopulation.xls", sheet = "Data") %>%
   mutate(across(where(is.character), as.factor))
 ```
 
-The dataset `GlobalPopulation.xls` contains country-level demographic records with fields: `Country`, `Continent`, `Year`, `Population`, `Young` (young-age population), and `Old` (elderly population). It is the dataset we will use throughout this exercise to demonstrate interactive visualisation techniques.
+::: {.callout-note}
+## What I Learned
+`read_xls()` from **readxl** handles Excel files natively — no CSV conversion needed. `mutate(across(where(is.character), as.factor))` is the modern dplyr idiom for bulk type conversion: `where(is.character)` acts as a column selector predicate, so any new character column added later is also automatically converted. This is more robust than listing column names manually.
+:::
 
 ---
 
-# Visual Data Exploration
+## Visual Data Exploration {#data-exploration}
+
+Before building interactive charts, it is essential to understand the structure and distribution of the data. Visual exploration helps identify patterns, skewness, and grouping variables that will guide interactive design choices.
 
 ::: {.panel-tabset}
 
-## Data Overview
+### Dataset Overview
 
 ```{r}
-#| code-fold: true
-#| fig.height: 10
+#| label: data-overview
+#| fig.height: 9
 
 n_records  <- nrow(pop_data)
 n_complete <- sum(complete.cases(pop_data))
@@ -94,20 +120,21 @@ var_types <- data.frame(Type = sapply(pop_data, function(x) class(x)[1])) %>%
   count(Type)
 
 p_sample <- ggplot(data.frame(x = 1, y = 1), aes(x, y)) +
-  geom_tile(fill = "#fce7f3", alpha = 0.5, width = 0.9, height = 0.9) +
+  geom_tile(fill = "#bfdbfe", alpha = 0.6, width = 0.9, height = 0.9) +
   geom_text(label = paste0("n = ", format(n_records, big.mark = ","), "\nrecords"),
-            size = 8, fontface = "bold", color = "#831843") +
+            size = 9, fontface = "bold", colour = "#1e3a5f") +
   labs(title = "Sample Size") +
   theme_void() +
   theme(plot.title = element_text(hjust = 0.5, face = "bold", size = 14))
 
 p_types <- ggplot(var_types, aes(x = reorder(Type, -n), y = n, fill = Type)) +
-  geom_col(alpha = 0.8, width = 0.6) +
+  geom_col(alpha = 0.85, width = 0.6) +
   geom_text(aes(label = n), vjust = -0.5, fontface = "bold", size = 5) +
-  scale_fill_manual(values = c("character" = "#fbcfe8", "factor" = "#e9d5ff",
-                                "numeric" = "#bfdbfe")) +
+  scale_fill_manual(values = c("factor"  = "#a5b4fc",
+                               "integer" = "#bfdbfe",
+                               "numeric" = "#93c5fd")) +
   labs(title = "Variable Types", x = "Type", y = "Count") +
-  ylim(0, max(var_types$n) * 1.2) +
+  ylim(0, max(var_types$n) * 1.25) +
   theme_minimal() +
   theme(plot.title = element_text(hjust = 0.5, face = "bold", size = 14),
         legend.position = "none")
@@ -115,36 +142,39 @@ p_types <- ggplot(var_types, aes(x = reorder(Type, -n), y = n, fill = Type)) +
 missing_df <- reshape2::melt(is.na(pop_data))
 
 p_missing <- ggplot(missing_df, aes(x = Var2, y = Var1, fill = value)) +
-  geom_tile(color = "white", linewidth = 0.05) +
+  geom_tile(colour = "white", linewidth = 0.05) +
   scale_fill_manual(values = c("FALSE" = "#10b981", "TRUE" = "#ef4444"),
                     labels = c("Complete", "Missing"), name = "Status") +
   labs(title = "Missing Value Heatmap", x = "Variables", y = "Observations") +
   theme_minimal() +
-  theme(plot.title = element_text(hjust = 0.5, face = "bold", size = 14),
-        axis.text.y  = element_blank(),
-        axis.ticks.y = element_blank(),
-        axis.text.x  = element_text(angle = 45, hjust = 1),
-        panel.grid   = element_blank())
+  theme(plot.title    = element_text(hjust = 0.5, face = "bold", size = 14),
+        axis.text.y   = element_blank(),
+        axis.ticks.y  = element_blank(),
+        axis.text.x   = element_text(angle = 45, hjust = 1),
+        panel.grid    = element_blank())
 
 (p_sample | p_types) / p_missing +
-  plot_annotation(title = "Dataset Overview",
-                  theme = theme(plot.title = element_text(size = 16, face = "bold", hjust = 0.5))) +
-  plot_layout(heights = c(1, 1.2))
+  plot_annotation(
+    title = "GlobalPopulation Dataset Overview",
+    theme = theme(plot.title = element_text(size = 16, face = "bold", hjust = 0.5))
+  ) +
+  plot_layout(heights = c(1, 1.4))
 ```
 
 ::: {.callout-note}
-## Analysis
-The dataset has `r format(n_records, big.mark=",")` records with `r sum(var_types$n[var_types$Type %in% c("character","factor")])` categorical and `r sum(var_types$n[var_types$Type=="numeric"])` numeric variables. The missing value heatmap reveals 100% complete no missing value
+## What I Learned
+The overview reveals that the dataset is 100% complete — an important confirmation before building interactive charts, since missing values can cause silent tooltip failures or blank hover panels. The variable type breakdown confirms that `Country` and `Continent` are factors (suitable for `data_id` grouping) while `Young`, `Old`, and `Population` are numeric (suitable for axis mappings and tooltip statistics).
 :::
 
-## Data Insights
+### Categorical Distributions
 
 ```{r}
-#| code-fold: true
-#| fig.height: 10
+#| label: cat-distributions
+#| fig.height: 9
 
-cat_vars      <- names(pop_data)[sapply(pop_data, function(x) is.character(x) || is.factor(x))]
-pastel_colors <- c("#fbcfe8","#bfdbfe","#bbf7d0","#e9d5ff","#fde68a","#fecaca","#a7f3d0","#ddd6fe")
+cat_vars      <- names(pop_data)[sapply(pop_data, is.factor)]
+pastel_colors <- c("#bfdbfe","#a5b4fc","#bbf7d0","#fde68a",
+                   "#fecaca","#fbcfe8","#a7f3d0","#ddd6fe")
 
 plot_list <- lapply(cat_vars, function(var) {
   plot_data <- pop_data %>%
@@ -153,121 +183,154 @@ plot_list <- lapply(cat_vars, function(var) {
     mutate(pct = n / sum(n) * 100) %>%
     arrange(desc(n))
 
-  n_cats      <- nrow(plot_data)
-  fill_colors <- rep_len(pastel_colors, n_cats)
-  title_suffix <- if (n_cats > 20) { plot_data <- slice_head(plot_data, n = 20); " (Top 20)" } else ""
+  n_cats    <- nrow(plot_data)
+  fills     <- rep_len(pastel_colors, n_cats)
+  title_sfx <- ""
+  if (n_cats > 20) { plot_data <- slice_head(plot_data, n = 20); title_sfx <- " (Top 20)" }
 
   ggplot(plot_data, aes(x = reorder(.data[[var]], -n), y = n, fill = .data[[var]])) +
-    geom_col(alpha = 0.9, width = 0.7, color = "white") +
-    geom_text(aes(label = paste0(n, "\n(", round(pct,1), "%)")),
-              vjust = -0.2, size = 2.5, fontface = "bold", color = "#831843") +
-    scale_fill_manual(values = fill_colors) +
-    labs(title = paste(var, "Distribution", title_suffix), y = "Count", x = "") +
-    ylim(0, max(plot_data$n) * 1.15) +
+    geom_col(alpha = 0.9, width = 0.7, colour = "white") +
+    geom_text(aes(label = paste0(n, "\n(", round(pct, 1), "%)")),
+              vjust = -0.2, size = 2.5, fontface = "bold", colour = "#1e3a5f") +
+    scale_fill_manual(values = fills) +
+    labs(title = paste(var, "Distribution", title_sfx), y = "Count", x = "") +
+    ylim(0, max(plot_data$n) * 1.18) +
     theme_minimal(base_size = 10) +
-    theme(plot.title    = element_text(hjust = 0.5, face = "bold", size = 11),
+    theme(plot.title      = element_text(hjust = 0.5, face = "bold", size = 11),
           legend.position = "none",
-          axis.text.x   = element_text(angle = 45, hjust = 1, size = 7))
+          axis.text.x     = element_text(angle = 45, hjust = 1, size = 7))
 })
 
 wrap_plots(plot_list, ncol = 2) +
-  plot_annotation(title = "Categorical Variable Distributions",
-                  theme = theme(plot.title = element_text(size = 13, face = "bold", hjust = 0.5)))
+  plot_annotation(
+    title = "Categorical Variable Distributions",
+    theme = theme(plot.title = element_text(size = 13, face = "bold", hjust = 0.5))
+  )
 ```
 
 ::: {.callout-note}
-## Analysis
-Always `group_by` before counting to get true frequencies per category. Africa has the most country-year records while Asia dominates by total population — a distinction only visible after proper aggregation. These distributions guide which grouping variables are most useful for colour-encoding in interactive charts.
+## What I Learned
+Africa has the most country-records in the dataset while Oceania has the fewest. This imbalance matters for interactive design: continent-level `data_id` grouping will produce dense hover clusters for Africa and sparse ones for Oceania. Understanding this distribution before coding helps anticipate which interactions will be visually clear versus confusing.
 :::
 
-## Understanding Data Relationships
+### Numeric Distributions
 
 ```{r}
-#| code-fold: true
-#| fig.height: 10
+#| label: numeric-distributions
+#| fig.height: 8
 
-latest_year     <- max(pop_data$Year, na.rm = TRUE)
-example_country <- pop_data %>% filter(Country == "China") %>% arrange(Year)
+latest_year <- max(pop_data$Year, na.rm = TRUE)
+latest_snap <- pop_data %>% filter(Year == latest_year)
 
-v1 <- pop_data %>% filter(Year == latest_year) %>%
-  ggplot(aes(x = Young, y = Population, size = Population, color = Continent)) +
-  geom_point(alpha = 0.6) +
-  scale_size_continuous(range = c(2, 15)) +
-  scale_color_viridis_d(option = "plasma") +
-  labs(title = "Q1: Young vs Population", x = "Young Population", y = "Total Population") +
-  theme_minimal() + theme(plot.title = element_text(face = "bold"))
+ph1 <- ggplot(latest_snap, aes(x = Old)) +
+  geom_histogram(bins = 30, fill = "#3b82f6", colour = "white", alpha = 0.85) +
+  labs(title = paste("% Aged —", latest_year), x = "% Aged", y = "Count") +
+  theme_minimal()
 
-v2 <- ggplot(example_country, aes(x = Year, y = Old)) +
-  geom_line(color = "#ec4899", linewidth = 1.2) + geom_point(color = "#831843", size = 3) +
-  labs(title = "Q2: China — Aging Trend", x = "Year", y = "Old Population") +
-  theme_minimal() + theme(plot.title = element_text(face = "bold"))
+ph2 <- ggplot(latest_snap, aes(x = Young)) +
+  geom_histogram(bins = 30, fill = "#ec4899", colour = "white", alpha = 0.85) +
+  labs(title = paste("% Young —", latest_year), x = "% Young", y = "Count") +
+  theme_minimal()
 
-v3 <- ggplot(example_country, aes(x = Year, y = Young)) +
-  geom_line(color = "#3b82f6", linewidth = 1.2) + geom_point(color = "#1e40af", size = 3) +
-  labs(title = "Q3: China — Youth Trend", x = "Year", y = "Young Population") +
-  theme_minimal() + theme(plot.title = element_text(face = "bold"))
+ph3 <- ggplot(latest_snap, aes(x = Population / 1e6)) +
+  geom_histogram(bins = 30, fill = "#10b981", colour = "white", alpha = 0.85) +
+  labs(title = paste("Population (M) —", latest_year),
+       x = "Population (Millions)", y = "Count") +
+  theme_minimal()
 
-v4 <- pop_data %>% filter(Year == latest_year) %>%
-  ggplot(aes(x = Young, y = Old, color = Continent)) +
-  geom_point(alpha = 0.7, size = 3) +
-  scale_color_viridis_d(option = "turbo") +
-  labs(title = "Q4: Young vs Old by Continent", x = "Young Population", y = "Old Population") +
-  theme_minimal() + theme(legend.position = "right", plot.title = element_text(face = "bold"))
+pb1 <- ggplot(latest_snap, aes(x = Continent, y = Old, fill = Continent)) +
+  geom_boxplot(alpha = 0.7, outlier.size = 1.5) +
+  scale_fill_viridis_d(option = "plasma") +
+  labs(title = "% Aged by Continent", x = "", y = "% Aged") +
+  theme_minimal() +
+  theme(legend.position = "none",
+        axis.text.x = element_text(angle = 30, hjust = 1))
 
-(v1 | v2) / (v3 | v4) +
-  plot_annotation(title = "Understanding Data Relationships",
-                  theme = theme(plot.title = element_text(size = 16, face = "bold", hjust = 0.5)))
-```
-
-::: {.callout-important}
-## Analysis
-Each chart type matches the analytical question: bubble charts encode three variables at once; line charts trace temporal change; scatter plots expose bivariate structure. China's Q2 and Q3 panels together tell the demographic squeeze story — a rising elderly share alongside a plateauing youth share — that no single chart alone reveals.
-:::
-
-## Data Summary
-
-```{r}
-#| code-fold: true
-glimpse(pop_data)
-```
-
-```{r}
-#| code-fold: true
-summary(pop_data %>% select(where(is.numeric)))
+(ph1 | ph2 | ph3) / pb1 +
+  plot_annotation(
+    title = "Numeric Variable Distributions",
+    theme = theme(plot.title = element_text(size = 14, face = "bold", hjust = 0.5))
+  ) +
+  plot_layout(heights = c(1, 1.3))
 ```
 
 ::: {.callout-note}
-## Analysis
-`glimpse()` confirms variable types and detects encoding issues in one step; `summary()` exposes range and quartile information, flagging extreme population values before interactive visualisation begins.
+## What I Learned
+Population is highly right-skewed — a handful of very populous countries dominate the scale. This explains why interactive charts use `sizes = c(2, 100)` in plotly or `scale_size(range = c(2, 12))` in ggplot2 to compress the mapping and keep small countries visible. The boxplot confirms that Europe has the highest median ageing percentage — a finding that interactive hover tooltips will let users drill into at the country level.
+:::
+
+### Variable Relationships
+
+```{r}
+#| label: variable-relationships
+#| fig.height: 9
+
+r1 <- ggplot(latest_snap, aes(x = Old, y = Young, colour = Continent)) +
+  geom_point(alpha = 0.6, size = 2.5) +
+  scale_colour_viridis_d(option = "turbo") +
+  labs(title = "% Aged vs % Young (latest year)",
+       subtitle = "Strong negative correlation — the demographic trade-off",
+       x = "% Aged", y = "% Young") +
+  theme_minimal()
+
+r2 <- pop_data %>%
+  group_by(Continent, Year) %>%
+  summarise(Mean_Old = mean(Old, na.rm = TRUE), .groups = "drop") %>%
+  ggplot(aes(x = Year, y = Mean_Old, colour = Continent)) +
+  geom_line(linewidth = 0.9) +
+  geom_point(size = 1.5) +
+  scale_colour_brewer(palette = "Set1") +
+  labs(title = "Mean % Aged Over Time by Continent",
+       subtitle = "All continents ageing — rate differs",
+       x = "Year", y = "Mean % Aged") +
+  theme_minimal()
+
+r1 / r2 +
+  plot_annotation(
+    title = "Key Data Relationships",
+    theme = theme(plot.title = element_text(size = 14, face = "bold", hjust = 0.5))
+  )
+```
+
+::: {.callout-note}
+## What I Learned
+The strong negative correlation between % Aged and % Young is the central analytical story of this dataset. Understanding it upfront directly motivates the interactive design choices ahead: `data_id = Continent` for group highlighting (to compare continental trajectories), and tooltips showing both Old and Young values simultaneously (to reveal the demographic trade-off at country level in a single hover).
 :::
 
 :::
 
 ---
 
-# ggiraph Methods
+## Interactive Data Visualisation — ggiraph Methods {#ggiraph-methods}
 
 ::: {.callout-tip}
 ## Core Concept
-**ggiraph** is an htmlwidget and ggplot2 extension that makes ggplot graphics interactive via three aesthetics: `tooltip` (text shown on hover), `data_id` (key for hover highlighting and cross-plot linking), and `onclick` (JavaScript executed on click). Workflow: swap `geom_*()` → `geom_*_interactive()`, then wrap in `girafe()`.
+**ggiraph** is an htmlwidget and ggplot2 extension. It makes ggplot graphics interactive via three aesthetics added to `geom_*_interactive()` functions:
+
+- **`tooltip`** — text shown when mouse hovers over an element
+- **`data_id`** — key that links elements for group highlighting
+- **`onclick`** — JavaScript string executed on click
+
+Workflow: replace `geom_*()` → `geom_*_interactive()`, add interactive aesthetics inside `aes()`, then wrap the ggplot object in `girafe()`.
 :::
 
-## Tooltip Effect with `tooltip` Aesthetic {#sec-tooltip-basic}
+### Tooltip Effect with `tooltip` Aesthetic {#tooltip-basic}
 
-The code chunk below plots a basic interactive chart using `geom_point_interactive()`. Two steps are involved: first build a ggplot object with an interactive geom; then pass it to `girafe()` to generate an SVG displayed on the HTML page.
+Below is a typical code pattern for an interactive statistical graph using **ggiraph**. Two steps are involved: first build a ggplot object with an interactive geom; then pass it to `girafe()` to generate an SVG widget displayed on the HTML page.
 
 ```{r}
-#| code-fold: true
+#| label: tooltip-basic
 
 p <- pop_data %>%
   filter(Year == max(Year, na.rm = TRUE)) %>%
-  ggplot(aes(x = Young, y = Population)) +
+  ggplot(aes(x = Old, y = Young)) +
   geom_point_interactive(
     aes(tooltip = Country),
-    size = 3, alpha = 0.7, color = "#831843"
+    size = 3, alpha = 0.7, colour = "#1e40af"
   ) +
-  labs(title = "Young vs Population — Basic Tooltip (hover for country name)",
-       x = "Young Population", y = "Total Population") +
+  labs(title  = "% Aged vs % Young — Basic Tooltip (hover for country name)",
+       subtitle = paste("Latest year:", max(pop_data$Year, na.rm = TRUE)),
+       x = "% Aged", y = "% Young") +
   theme_minimal() +
   theme(plot.title = element_text(face = "bold", size = 13))
 
@@ -278,34 +341,38 @@ girafe(
 )
 ```
 
-Interactivity: hovering the mouse over any data point displays the country name. Notice that the only change from a standard ggplot is replacing `geom_point()` with `geom_point_interactive()` and adding `tooltip = Country` inside `aes()`, then wrapping the whole object in `girafe()`.
+By hovering the mouse pointer on any data point, the country name is displayed. The only change from a standard ggplot is replacing `geom_point()` with `geom_point_interactive()` and adding `tooltip = Country` inside `aes()`, then wrapping in `girafe()`.
 
 ::: {.callout-note}
 ## What I Learned
-The two-step pattern — interactive geom → `girafe()` — is the mental model for all ggiraph work. The SVG output embeds directly in HTML reports with no extra server required. This is the cleanest entry point: minimal code change, immediate hover feedback.
+The two-step pattern — interactive geom → `girafe()` — is the mental model for all ggiraph work. The SVG output embeds directly in HTML reports with no extra server required. This is the cleanest entry point: one swapped geom + one wrapper, and you have immediate hover feedback. Critically, the tooltip must reference a column that already exists in the data frame — you cannot compute values inline inside `aes()` the way you can with `colour =` or `size =`.
 :::
 
-## Displaying Multiple Information on Tooltip {#sec-tooltip-multi}
+---
+
+### Displaying Multiple Information on Tooltip {#tooltip-multi}
 
 Tooltip content can be customised by constructing a character column that combines multiple fields:
 
 ```{r}
-#| code-fold: true
+#| label: tooltip-multi
 
-latest <- pop_data %>%
+latest_multi <- pop_data %>%
   filter(Year == max(Year, na.rm = TRUE)) %>%
   mutate(tooltip_text = paste0(
-    "Country = ", Country,
-    "\nContinent = ", Continent
+    "Country = ",    Country,
+    "\nContinent = ", Continent,
+    "\n% Aged = ",   round(Old, 1),   "%",
+    "\n% Young = ",  round(Young, 1), "%"
   ))
 
-p <- ggplot(data = latest, aes(x = Young, y = Population)) +
+p <- ggplot(data = latest_multi, aes(x = Old, y = Young)) +
   geom_point_interactive(
     aes(tooltip = tooltip_text),
-    size = 3, alpha = 0.7, color = "#1e40af"
+    size = 3, alpha = 0.7, colour = "#059669"
   ) +
-  labs(title = "Young vs Population — Multi-field Tooltip",
-       x = "Young Population", y = "Total Population") +
+  labs(title = "% Aged vs % Young — Multi-field Tooltip",
+       x = "% Aged", y = "% Young") +
   theme_minimal() +
   theme(plot.title = element_text(face = "bold", size = 13))
 
@@ -316,37 +383,43 @@ girafe(
 )
 ```
 
-Interactivity: hovering shows both Country and Continent. The `paste0()` call builds a multi-line string by inserting `\n` between fields; this string is pre-computed as a new column and then referenced in `aes(tooltip = ...)`. The key insight is that the tooltip column must exist in the data frame before being passed to the aesthetic.
+The first `mutate()` call creates a new `tooltip_text` column. At the same time, it populates text from `Country`, `Continent`, `Old`, and `Young` fields into the newly created field, which is then passed to `aes(tooltip = tooltip_text)`.
+
+By hovering on a data point, Country, Continent, % Aged, and % Young are all displayed together.
 
 ::: {.callout-note}
 ## What I Learned
-Pre-computing a tooltip column with `mutate()` before the ggplot call keeps the `aes()` clean and makes complex tooltips easy to debug. Calling `paste0()` with explicit field labels (e.g., `"Country = "`) makes tooltips self-explanatory for end users.
+Pre-computing a tooltip column with `mutate()` before the ggplot call keeps `aes()` clean and makes complex tooltips easy to debug — you can inspect the tooltip column directly with `head()`. Using explicit field labels (e.g., `"Country = "`) makes tooltips self-explanatory for end users who may not recognise which axis maps to which variable.
 :::
 
-## Customising Tooltip Style {#sec-tooltip-style}
+---
 
-`opts_tooltip()` inside `girafe()` applies CSS to the tooltip container:
+## Interactivity — Customisation {#interactivity-customisation}
+
+### Customising Tooltip Style {#tooltip-style}
+
+`opts_tooltip()` inside `girafe()` applies CSS to the tooltip container, allowing full visual control over its appearance:
 
 ```{r}
-#| code-fold: true
+#| label: tooltip-style
 
 tooltip_css <- "background-color:#1e293b; color:#f8fafc; font-weight:bold;
                 padding:8px 12px; border-radius:6px; font-size:13px;"
 
-latest <- pop_data %>%
+latest_styled <- pop_data %>%
   filter(Year == max(Year, na.rm = TRUE)) %>%
   mutate(tooltip_text = paste0(
-    "Country = ", Country,
+    "Country = ",    Country,
     "\nContinent = ", Continent
   ))
 
-p <- ggplot(data = latest, aes(x = Young, y = Population)) +
+p <- ggplot(data = latest_styled, aes(x = Old, y = Young)) +
   geom_point_interactive(
     aes(tooltip = tooltip_text),
-    size = 3, alpha = 0.7, color = "#059669"
+    size = 3, alpha = 0.7, colour = "#7c3aed"
   ) +
-  labs(title = "Young vs Population — Styled Tooltip (dark background)",
-       x = "Young Population", y = "Total Population") +
+  labs(title = "% Aged vs % Young — Styled Tooltip (dark background)",
+       x = "% Aged", y = "% Young") +
   theme_minimal() +
   theme(plot.title = element_text(face = "bold", size = 13))
 
@@ -360,74 +433,80 @@ girafe(
 )
 ```
 
-The `tooltip_css` string is a standard CSS declaration. `opts_tooltip(css = ...)` passes it directly to the SVG tooltip element. The same CSS properties available in web development — `background-color`, `color`, `font-weight`, `border-radius` — work here. Refer to [Customizing girafe objects](https://www.ardata.fr/ggiraph-book/customize.html) for a full list of options.
+The `tooltip_css` string is a standard CSS declaration. `opts_tooltip(css = ...)` passes it to the SVG tooltip element. The same CSS properties available in web development — `background-color`, `color`, `font-weight`, `border-radius` — work here. Refer to [Customizing girafe objects](https://www.ardata.fr/ggiraph-book/customize.html) for a full list of options.
 
 ::: {.callout-note}
 ## What I Learned
-Tooltip CSS is applied at the `girafe()` level, not inside `aes()`, which keeps styling concerns cleanly separated from data mapping. Dark backgrounds with light text (`#1e293b` / `#f8fafc`) immediately distinguish the tooltip from the chart background.
+Tooltip CSS is applied at the `girafe()` level, not inside `aes()` — this cleanly separates data mapping from visual styling. Dark backgrounds with light text (`#1e293b` / `#f8fafc`) immediately distinguish the tooltip from the chart background, improving readability regardless of the chart's colour scheme. This mirrors best practices from web UI design applied directly to R visualisations.
 :::
 
-## Displaying Statistics on Tooltip {#sec-tooltip-stats}
+---
+
+### Displaying Statistics on Tooltip {#tooltip-stats}
 
 A function can compute derived statistics and embed them in the tooltip using `after_stat()`:
 
 ```{r}
-#| code-fold: true
+#| label: tooltip-stats
 
 tooltip_fn <- function(y, ymax, accuracy = 0.01) {
   mean_val <- scales::number(y, accuracy = accuracy)
   sem_val  <- scales::number(ymax - y, accuracy = accuracy)
-  paste("Mean Young Population:", mean_val, "+/-", sem_val)
+  paste("Mean % Aged:", mean_val, "+/-", sem_val)
 }
 
-gg_bar <- ggplot(data = pop_data %>% filter(Year == max(Year, na.rm = TRUE)),
-                 aes(x = Continent)) +
+latest_stat <- pop_data %>% filter(Year == max(Year, na.rm = TRUE))
+
+gg_bar <- ggplot(data = latest_stat, aes(x = Continent)) +
   stat_summary(
-    aes(y = Young,
+    aes(y       = Old,
         tooltip = after_stat(tooltip_fn(y, ymax))),
     fun.data = "mean_se",
     geom     = GeomInteractiveCol,
-    fill     = "lightblue"
+    fill     = "#93c5fd"
   ) +
   stat_summary(
-    aes(y = Young),
+    aes(y = Old),
     fun.data = mean_se,
     geom     = "errorbar",
     width    = 0.2, linewidth = 0.4
   ) +
-  labs(title = "Mean Young Population by Continent — Statistics on Tooltip",
-       x = "Continent", y = "Mean Young Population") +
+  labs(title    = "Mean % Aged by Continent — Statistics on Tooltip",
+       subtitle  = "Hover each bar to see Mean ± SEM",
+       x = "Continent", y = "Mean % Aged") +
   theme_minimal() +
-  theme(plot.title = element_text(face = "bold", size = 13),
+  theme(plot.title  = element_text(face = "bold", size = 13),
         axis.text.x = element_text(angle = 30, hjust = 1))
 
 girafe(ggobj = gg_bar, width_svg = 10, height_svg = 10 * 0.618)
 ```
 
-`after_stat()` defers evaluation of `tooltip_fn(y, ymax)` until `stat_summary` has computed the summary statistics, meaning `y` and `ymax` refer to the computed mean and upper confidence bound — not raw data columns. `GeomInteractiveCol` is the interactive version of `GeomCol`, enabling the tooltip on bar charts.
+`after_stat()` defers evaluation of `tooltip_fn(y, ymax)` until `stat_summary` has computed the summary statistics — meaning `y` and `ymax` refer to the *computed* mean and upper bound (mean + SE), not raw data columns. `GeomInteractiveCol` is the interactive version of `GeomCol`, enabling the tooltip on bar charts.
 
 ::: {.callout-note}
 ## What I Learned
-`after_stat()` is the bridge between statistical transformations and interactive aesthetics. Without it, computed values like `y` (mean) and `ymax` (mean + SE) would not be accessible inside `aes()`. This pattern is essential whenever you want to show computed statistics — not raw values — on hover.
+`after_stat()` is the bridge between statistical transformations and interactive aesthetics. Without it, computed values like `y` (mean) and `ymax` (mean + SE) would not be accessible inside `aes()`. This pattern is essential whenever you want to show computed statistics — not raw values — on hover. For demographic data, showing Mean ± SEM on hover turns a simple bar chart into a rigorous statistical summary without cluttering the visual with permanent annotations.
 :::
 
-## Hover Effect with `data_id` Aesthetic {#sec-data-id}
+---
+
+### Hover Effect with `data_id` Aesthetic {#data-id}
 
 `data_id` is the second interactive feature of ggiraph. Elements sharing the same `data_id` value are highlighted together on hover:
 
 ```{r}
-#| code-fold: true
+#| label: data-id-basic
 
-latest <- pop_data %>% filter(Year == max(Year, na.rm = TRUE))
+latest_id <- pop_data %>% filter(Year == max(Year, na.rm = TRUE))
 
-p <- ggplot(data = latest, aes(x = Young, y = Population, color = Continent)) +
+p <- ggplot(data = latest_id, aes(x = Old, y = Young, colour = Continent)) +
   geom_point_interactive(
     aes(data_id = Continent),
     size = 3, alpha = 0.7
   ) +
-  scale_color_viridis_d(option = "plasma") +
+  scale_colour_viridis_d(option = "plasma") +
   labs(title = "Hover to highlight all countries in the same continent",
-       x = "Young Population", y = "Total Population") +
+       x = "% Aged", y = "% Young") +
   theme_minimal() +
   theme(plot.title = element_text(face = "bold", size = 13))
 
@@ -438,30 +517,32 @@ girafe(
 )
 ```
 
-Interactivity: hovering over any point highlights all points sharing the same `Continent` value. The default hover CSS is `fill:orange`. Note that `data_id` and `tooltip` are independent: you can use either or both.
+Elements associated with a `data_id` (i.e. `Continent`) will be highlighted upon mouse over. The default value of the hover CSS is `hover_css = "fill:orange;"`. Note that `data_id` and `tooltip` are independent: you can use either or both.
 
 ::: {.callout-note}
 ## What I Learned
-`data_id` is the mechanism that makes ggiraph's linking magic work. Assigning the same key to multiple elements (all points from Asia, for example) causes them to respond as a group. This is the foundation for coordinated views later.
+`data_id` is the mechanism that makes ggiraph's linking magic possible. Assigning the same key to multiple elements (all points from Asia, for example) causes them to respond as a group. This transforms a simple hover into a powerful grouping tool — the viewer can immediately see all members of a continent cluster without needing colour legend lookup or filtering. This is the foundation for coordinated multiple views later.
 :::
 
-## Styling the Hover Effect {#sec-hover-style}
+---
+
+### Styling the Hover Effect {#hover-style}
 
 CSS codes inside `opts_hover()` and `opts_hover_inv()` change the highlighting colour and dim non-hovered elements:
 
 ```{r}
-#| code-fold: true
+#| label: hover-style
 
-latest <- pop_data %>% filter(Year == max(Year, na.rm = TRUE))
+latest_hover <- pop_data %>% filter(Year == max(Year, na.rm = TRUE))
 
-p <- ggplot(data = latest, aes(x = Young, y = Population, color = Continent)) +
+p <- ggplot(data = latest_hover, aes(x = Old, y = Young, colour = Continent)) +
   geom_point_interactive(
     aes(data_id = Continent),
     size = 3, alpha = 0.7
   ) +
-  scale_color_viridis_d(option = "plasma") +
-  labs(title = "Styled hover: highlighted in dark, others dimmed",
-       x = "Young Population", y = "Total Population") +
+  scale_colour_viridis_d(option = "plasma") +
+  labs(title = "Styled hover: hovered continent bold, others dimmed",
+       x = "% Aged", y = "% Young") +
   theme_minimal() +
   theme(plot.title = element_text(face = "bold", size = 13))
 
@@ -476,38 +557,41 @@ girafe(
 )
 ```
 
-`opts_hover()` defines the CSS applied to the *hovered* element; `opts_hover_inv()` applies to all *other* elements. Setting `opacity:0.15` on non-hovered elements creates a focus effect that naturally draws attention to the active group without removing context.
+Different from the previous example, here the CSS customisation requests are encoded directly inside `opts_hover()` and `opts_hover_inv()`. `opts_hover()` defines the CSS for the *hovered* element; `opts_hover_inv()` applies to all *other* elements.
 
 ::: {.callout-note}
 ## What I Learned
-The `opts_hover_inv()` pattern — dim everything else — is far more effective than just highlighting the active element. The contrast between `opacity:0.15` (background) and the bold dark fill (hovered) creates immediate visual hierarchy with only two lines of CSS.
+The `opts_hover_inv()` pattern — dim everything else — is far more effective than highlighting the active element alone. The contrast between `opacity:0.15` (background countries) and the bold dark fill (hovered continent) creates immediate visual hierarchy with only two CSS lines. Applied to demographic data, this lets the viewer instantly isolate one continent's position in the % Aged vs % Young space without losing context of the full distribution.
 :::
 
-## Combining Tooltip and Hover Effect {#sec-tooltip-hover}
+---
 
-Tooltip and `data_id` can be combined in the same `aes()` call:
+### Combining Tooltip and Hover Effect {#tooltip-hover}
+
+There are times we want to combine tooltip and hover effect on the interactive statistical graph:
 
 ```{r}
-#| code-fold: true
+#| label: tooltip-hover-combined
 
-latest <- pop_data %>%
+latest_combo <- pop_data %>%
   filter(Year == max(Year, na.rm = TRUE)) %>%
   mutate(tooltip_text = paste0(
-    "Country = ", Country,
-    "\nContinent = ", Continent,
-    "\nYoung = ", format(Young, big.mark = ","),
-    "\nPopulation = ", format(Population, big.mark = ",")
+    "Country: ",     Country,
+    "\nContinent: ", Continent,
+    "\n% Aged: ",    round(Old, 1),   "%",
+    "\n% Young: ",   round(Young, 1), "%",
+    "\nPopulation: ", format(Population, big.mark = ",")
   ))
 
-p <- ggplot(data = latest, aes(x = Young, y = Population, color = Continent)) +
+p <- ggplot(data = latest_combo, aes(x = Old, y = Young, colour = Continent)) +
   geom_point_interactive(
     aes(tooltip = tooltip_text,
         data_id = Continent),
     size = 3, alpha = 0.7
   ) +
-  scale_color_viridis_d(option = "turbo") +
-  labs(title = "Combined: tooltip shows detail, hover highlights continent group",
-       x = "Young Population", y = "Total Population") +
+  scale_colour_viridis_d(option = "turbo") +
+  labs(title = "Combined: tooltip shows country detail, hover highlights continent",
+       x = "% Aged", y = "% Young") +
   theme_minimal() +
   theme(plot.title = element_text(face = "bold", size = 13))
 
@@ -522,38 +606,43 @@ girafe(
 )
 ```
 
-Interactivity: hovering over a point highlights the entire continent group **and** shows the individual country's detail in the tooltip. The two aesthetics work simultaneously — `tooltip` gives individual context while `data_id` gives group context.
+Elements associated with a `data_id` (i.e. `Continent`) will be highlighted upon mouse over. At the same time, the tooltip will show the individual country's full demographic profile.
 
 ::: {.callout-note}
 ## What I Learned
-Combining tooltip and data_id delivers two levels of information at once: the tooltip tells you *what* a specific point is, while the hover highlight tells you *which group it belongs to*. This layering is a powerful technique for hierarchical datasets like country-within-continent.
+Combining tooltip and `data_id` delivers two analytical layers at once — **individual context** (which country, what values) via tooltip, and **group context** (which continent, which cluster) via hover highlighting. For hierarchical datasets like country-within-continent, this layered interactivity matches the natural analytical workflow: first notice a cluster, then explore specific countries within it. This is impossible to achieve with static charts.
 :::
 
-## Click Effect with `onclick` {#sec-onclick}
+---
 
-The `onclick` aesthetic accepts any valid JavaScript string and executes it when a point is clicked:
+### Click Effect with `onclick` {#onclick}
+
+`onclick` argument of ggiraph provides hotlink interactivity on the web. The code chunk below shows an example:
 
 ```{r}
-#| code-fold: true
+#| label: onclick
 
-latest_onclick <- pop_data %>%
+latest_click <- pop_data %>%
   filter(Year == max(Year, na.rm = TRUE)) %>%
-  mutate(onclick_js = paste0(
-    "window.open('https://www.google.com/search?q=",
-    URLencode(paste(as.character(Country), "population statistics")),
-    "')"
-  ),
-  tooltip_text = paste0(Country, "\n(click to search Google)"))
+  mutate(
+    onclick_js   = paste0(
+      "window.open('https://www.google.com/search?q=",
+      URLencode(paste(as.character(Country), "population demographics")),
+      "')"
+    ),
+    tooltip_text = paste0(as.character(Country),
+                          "\n(click to open Google search)")
+  )
 
-p <- ggplot(data = latest_onclick, aes(x = Young, y = Population, color = Continent)) +
+p <- ggplot(data = latest_click, aes(x = Old, y = Young, colour = Continent)) +
   geom_point_interactive(
     aes(tooltip = tooltip_text,
         onclick  = onclick_js),
     size = 3.5, alpha = 0.7
   ) +
-  scale_color_viridis_d(option = "plasma") +
-  labs(title = "Click any point to open a Google search for that country",
-       x = "Young Population", y = "Total Population") +
+  scale_colour_viridis_d(option = "plasma") +
+  labs(title = "Click any country point to open a Google search for that country",
+       x = "% Aged", y = "% Young") +
   theme_minimal() +
   theme(plot.title = element_text(face = "bold", size = 13))
 
@@ -567,54 +656,62 @@ girafe(
 )
 ```
 
+Web document link with a data object will be displayed on the web browser upon mouse click.
+
 ::: {.callout-warning}
 Note that click actions must be a **string column** in the dataset containing valid JavaScript instructions. The `onclick` value is evaluated as raw JavaScript in the browser — errors in the JS string will silently fail.
 :::
 
-Interactivity: clicking a country point opens a new browser tab with a Google search for that country's population statistics. `sprintf()` or `paste0()` with `URLencode()` are the standard approaches for building JavaScript `window.open()` strings safely.
-
 ::: {.callout-note}
 ## What I Learned
-The `onclick` aesthetic turns every data point into a hyperlink — bridging the visualisation to external information systems. `cursor:pointer` in `opts_hover()` signals clickability to users without any additional UI elements. Always pre-compute the JS string as a data column; never build it inside `aes()`.
+The `onclick` aesthetic turns every data point into a hyperlink — bridging the visualisation to any external information system. `cursor:pointer` in `opts_hover()` signals clickability to users without additional UI elements. Always pre-compute the JS string as a data column (never build it inside `aes()`), and always use `URLencode()` for country names to handle spaces and special characters correctly.
 :::
 
-## Coordinated Multiple Views with ggiraph {#sec-ggiraph-coordinated}
+---
 
-When multiple ggiraph plots share the same `data_id` values and are combined with `patchwork` inside `girafe()`, hovering or clicking any element highlights its counterpart across all panels simultaneously:
+### Coordinated Multiple Views with ggiraph {#ggiraph-coordinated}
+
+When a data point of one of the scatter plots is selected, the corresponding data point on the second visualisation will be highlighted too.
+
+In order to build coordinated multiple views, the following programming strategy is used:
+
+1. Appropriate interactive functions of **ggiraph** are used to create the multiple views.
+2. `patchwork` function of the **patchwork** package is used *inside* `girafe()` via the `code` argument to create the interactive coordinated multiple views.
 
 ```{r}
-#| code-fold: true
+#| label: ggiraph-coordinated
 
-latest <- pop_data %>%
+latest_coord <- pop_data %>%
   filter(Year == max(Year, na.rm = TRUE)) %>%
-  mutate(tooltip_text = paste0("<b>", Country, "</b><br>Continent: ", Continent))
+  mutate(tooltip_text = paste0(
+    "<b>", Country, "</b><br>",
+    "Continent: ", Continent, "<br>",
+    "% Aged: ",   round(Old, 1),   "%<br>",
+    "% Young: ",  round(Young, 1), "%"
+  ))
 
-p1 <- ggplot(data = latest, aes(x = Young, y = Population, color = Continent)) +
+p1 <- ggplot(data = latest_coord, aes(x = Old, y = Young, colour = Continent)) +
   geom_point_interactive(
     aes(data_id = Country,
-        tooltip = paste0(tooltip_text,
-                         "<br>Young: ", format(Young, big.mark = ","),
-                         "<br>Population: ", format(Population, big.mark = ","))),
+        tooltip = tooltip_text),
     size = 3, alpha = 0.7
   ) +
-  scale_color_viridis_d(option = "plasma") +
-  coord_cartesian(xlim = c(0, max(latest$Young, na.rm = TRUE) * 1.05)) +
-  labs(title = "Young vs Total Population", x = "Young", y = "Total Population") +
+  scale_colour_viridis_d(option = "plasma") +
+  labs(title = "% Aged vs % Young",
+       x = "% Aged", y = "% Young") +
   theme_minimal() +
   theme(legend.position = "none",
         plot.title = element_text(face = "bold", size = 11))
 
-p2 <- ggplot(data = latest, aes(x = Young, y = Old, color = Continent)) +
+p2 <- ggplot(data = latest_coord, aes(x = Old, y = Population / 1e6, colour = Continent)) +
   geom_point_interactive(
     aes(data_id = Country,
-        tooltip = paste0(tooltip_text,
-                         "<br>Young: ", format(Young, big.mark = ","),
-                         "<br>Old: ", format(Old, big.mark = ","))),
+        tooltip = tooltip_text),
     size = 3, alpha = 0.7
   ) +
-  scale_color_viridis_d(option = "turbo") +
-  coord_cartesian(xlim = c(0, max(latest$Young, na.rm = TRUE) * 1.05)) +
-  labs(title = "Young vs Old Population", x = "Young", y = "Old Population") +
+  scale_colour_viridis_d(option = "turbo") +
+  labs(title = "% Aged vs Population (Millions)",
+       x = "% Aged", y = "Population (M)") +
   theme_minimal() +
   theme(legend.position = "none",
         plot.title = element_text(face = "bold", size = 11))
@@ -630,30 +727,30 @@ girafe(
 )
 ```
 
-Notice that when a data point in the left panel is hovered, the corresponding country point in the right panel is highlighted too. The `data_id` aesthetic is critical to link observations between plots — here `Country` is the shared key. The tooltip aesthetic is optional but provides useful per-point detail.
-
-The programming strategy:
-
-1. Appropriate interactive geoms with matching `data_id` values are used to create each panel.
-2. `patchwork` (`+`) is used *inside* `girafe(code = print(...))` — this is the key: passing combined plots through the `code` argument activates cross-panel linking.
+The `data_id` aesthetic is critical to link observations between plots — here `Country` is the shared key. The tooltip aesthetic is optional but provides useful per-point detail when hovering.
 
 ::: {.callout-important}
 ## What I Learned
-Coordinated views require two things to work: (1) identical `data_id` keys across all panels, and (2) the patchwork combination placed *inside* `girafe()` via the `code` argument rather than `ggobj`. When both conditions are met, ggiraph handles all the JavaScript linking automatically — no manual event handling required.
+Coordinated views require two conditions: (1) identical `data_id` keys across all panels — `Country` here — and (2) the patchwork combination placed *inside* `girafe()` via the `code` argument rather than `ggobj`. When both conditions are met, ggiraph handles all JavaScript linking automatically. This enables a powerful workflow: identify an outlier in the demographic scatter (left panel) and instantly see its population size context (right panel) — something a static chart grid can never achieve.
 :::
 
 ---
 
-# plotly Methods
+## Interactive Data Visualisation — plotly Methods {#plotly-methods}
 
 ::: {.callout-tip}
 ## Core Concept
-Plotly's R library creates interactive web graphics via two approaches: `plot_ly()` (native plotly syntax using `~` column references) and `ggplotly()` (converts existing ggplot2 objects). Both produce charts with built-in zoom, pan, hover tooltips, and download buttons.
+**plotly**'s R library creates interactive web graphics via two approaches:
+
+- `plot_ly()` — native plotly syntax using `~` column references
+- `ggplotly()` — converts an existing ggplot2 object
+
+Both produce charts with built-in zoom, pan, hover tooltips, and download buttons. plotly renders via JavaScript (`plotly.js`) rather than SVG, making it particularly suited for web dashboards.
 :::
 
-## Creating an Interactive Scatter Plot: `plot_ly()` Method {#sec-plotly-basic}
+### Creating an Interactive Scatter Plot: `plot_ly()` Method {#plotly-basic}
 
-`plot_ly()` is plotly's native interface. Column references use the tilde (`~`) notation:
+The tabset below shows a basic interactive plot created by using `plot_ly()`:
 
 ::: {.panel-tabset}
 
@@ -663,11 +760,11 @@ Plotly's R library creates interactive web graphics via two approaches: `plot_ly
 #| code-fold: false
 #| echo: false
 
-latest_plotly <- pop_data %>% filter(Year == max(Year, na.rm = TRUE))
+latest_pl <- pop_data %>% filter(Year == max(Year, na.rm = TRUE))
 
-plot_ly(data = latest_plotly,
-        x    = ~Young,
-        y    = ~Old)
+plot_ly(data = latest_pl,
+        x    = ~Old,
+        y    = ~Young)
 ```
 
 ### The Code Chunk
@@ -675,25 +772,27 @@ plot_ly(data = latest_plotly,
 ```{r}
 #| eval: false
 
-latest_plotly <- pop_data %>% filter(Year == max(Year, na.rm = TRUE))
+latest_pl <- pop_data %>% filter(Year == max(Year, na.rm = TRUE))
 
-plot_ly(data = latest_plotly,
-        x    = ~Young,
-        y    = ~Old)
+plot_ly(data = latest_pl,
+        x    = ~Old,
+        y    = ~Young)
 ```
 
 :::
 
-The default output is already interactive: hover to see coordinates, drag to zoom, double-click to reset. The `~` before column names tells plotly to look up those names in the `data` argument. No additional configuration is required for a basic scatter.
+The default output is already interactive: hover to see coordinates, drag to zoom, double-click to reset.
 
 ::: {.callout-note}
 ## What I Learned
-`plot_ly()` produces a fully interactive chart with a single call — no `ggplot()` + `geom_*()` chain required. The tilde syntax is distinctive to plotly and signals that the value is a column reference, not a literal. The default toolbar (zoom, pan, select, download) is added automatically.
+`plot_ly()` produces a fully interactive chart with a single function call. The tilde syntax (`~Old`) is distinctive to plotly and signals a column reference, not a literal value. The default toolbar (zoom, pan, box select, lasso, download as PNG) is added automatically and requires no configuration — a stark contrast to the manual `girafe()` setup in ggiraph.
 :::
 
-## Working with Visual Variables: `plot_ly()` Method {#sec-plotly-color}
+---
 
-The `color` argument maps a qualitative variable to colour, and clicking legend symbols toggles trace visibility:
+### Working with Visual Variables: `plot_ly()` Method {#plotly-color}
+
+The `color` argument maps a qualitative variable to colour. Clicking legend symbols toggles trace visibility:
 
 ::: {.panel-tabset}
 
@@ -703,13 +802,13 @@ The `color` argument maps a qualitative variable to colour, and clicking legend 
 #| code-fold: false
 #| echo: false
 
-latest_plotly <- pop_data %>% filter(Year == max(Year, na.rm = TRUE))
+latest_pl <- pop_data %>% filter(Year == max(Year, na.rm = TRUE))
 
-plot_ly(data   = latest_plotly,
-        x      = ~Young,
-        y      = ~Old,
+plot_ly(data   = latest_pl,
+        x      = ~Old,
+        y      = ~Young,
         color  = ~Continent,
-        colors = viridis::viridis(length(unique(latest_plotly$Continent))))
+        colors = viridis::viridis(length(unique(latest_pl$Continent))))
 ```
 
 ### The Code Chunk
@@ -717,27 +816,29 @@ plot_ly(data   = latest_plotly,
 ```{r}
 #| eval: false
 
-latest_plotly <- pop_data %>% filter(Year == max(Year, na.rm = TRUE))
+latest_pl <- pop_data %>% filter(Year == max(Year, na.rm = TRUE))
 
-plot_ly(data   = latest_plotly,
-        x      = ~Young,
-        y      = ~Old,
+plot_ly(data   = latest_pl,
+        x      = ~Old,
+        y      = ~Young,
         color  = ~Continent,
-        colors = viridis::viridis(length(unique(latest_plotly$Continent))))
+        colors = viridis::viridis(length(unique(latest_pl$Continent))))
 ```
 
 :::
 
-Interactivity: click on a continent's colour symbol in the legend to show/hide that group. Double-click a legend item to isolate it. The `colors` argument accepts a named vector or a palette function — here `viridis::viridis()` generates the correct number of distinct colours automatically.
+Click on the colour symbol at the legend to toggle groups on/off. Double-click to isolate one continent.
 
 ::: {.callout-note}
 ## What I Learned
-Mapping `color` to a factor in `plot_ly()` automatically creates a legend with toggle interactivity — a feature that would require custom JavaScript in a static chart. Clicking continent symbols to isolate groups is far more intuitive for exploratory analysis than filtering data and re-rendering.
+Mapping `color` to a factor automatically creates a legend with toggle interactivity — a feature that would require custom JavaScript in a static chart. For demographic data, clicking continent labels to isolate groups is far more intuitive than filtering data and re-rendering. The `colors` argument accepts a palette function; `viridis::viridis()` generates the correct number of accessible colours automatically without requiring a named vector.
 :::
 
-## Creating an Interactive Scatter Plot: `ggplotly()` Method {#sec-ggplotly}
+---
 
-`ggplotly()` converts any existing ggplot2 object into a plotly chart. The only extra line is the `ggplotly()` wrapper:
+### Creating an Interactive Scatter Plot: `ggplotly()` Method {#ggplotly-method}
+
+`ggplotly()` converts any existing ggplot2 object into a plotly chart:
 
 ::: {.panel-tabset}
 
@@ -749,12 +850,11 @@ Mapping `color` to a factor in `plot_ly()` automatically creates a legend with t
 
 latest_gg <- pop_data %>% filter(Year == max(Year, na.rm = TRUE))
 
-p <- ggplot(data = latest_gg, aes(x = Young, y = Old, color = Continent)) +
-  geom_point(size = 2, alpha = 0.7) +
-  scale_color_viridis_d(option = "plasma") +
-  coord_cartesian(xlim = c(0, max(latest_gg$Young, na.rm = TRUE) * 1.05),
-                  ylim = c(0, max(latest_gg$Old,   na.rm = TRUE) * 1.05)) +
-  labs(title = "Young vs Old Population", x = "Young Population", y = "Old Population") +
+p <- ggplot(data = latest_gg, aes(x = Old, y = Young, colour = Continent)) +
+  geom_point(size = 2.5, alpha = 0.7) +
+  scale_colour_viridis_d(option = "plasma") +
+  labs(title = "% Aged vs % Young",
+       x = "% Aged", y = "% Young") +
   theme_minimal()
 
 ggplotly(p)
@@ -767,12 +867,11 @@ ggplotly(p)
 
 latest_gg <- pop_data %>% filter(Year == max(Year, na.rm = TRUE))
 
-p <- ggplot(data = latest_gg, aes(x = Young, y = Old, color = Continent)) +
-  geom_point(size = 2, alpha = 0.7) +
-  scale_color_viridis_d(option = "plasma") +
-  coord_cartesian(xlim = c(0, max(latest_gg$Young, na.rm = TRUE) * 1.05),
-                  ylim = c(0, max(latest_gg$Old,   na.rm = TRUE) * 1.05)) +
-  labs(title = "Young vs Old Population", x = "Young Population", y = "Old Population") +
+p <- ggplot(data = latest_gg, aes(x = Old, y = Young, colour = Continent)) +
+  geom_point(size = 2.5, alpha = 0.7) +
+  scale_colour_viridis_d(option = "plasma") +
+  labs(title = "% Aged vs % Young",
+       x = "% Aged", y = "% Young") +
   theme_minimal()
 
 ggplotly(p)
@@ -780,20 +879,22 @@ ggplotly(p)
 
 :::
 
-Notice that the only additional line needed is `ggplotly(p)`. The zoom toolbar, hover tooltips, and legend toggles are added automatically. This is the fastest path to interactivity when you already have a ggplot2 pipeline.
+Notice that the only extra line needed is `ggplotly(p)`. The zoom toolbar, hover tooltips, and legend toggles are added automatically.
 
 ::: {.callout-note}
 ## What I Learned
-`ggplotly()` is the bridge between the ggplot2 ecosystem and plotly interactivity. When you already have carefully crafted ggplot code (with proper themes, colour scales, labels), `ggplotly()` preserves all of it while adding the full plotly toolbar. The trade-off is that some advanced ggplot2 features (like `geom_sf`) may not translate perfectly.
+`ggplotly()` is the bridge between the ggplot2 ecosystem and plotly interactivity. When you already have carefully crafted ggplot code with proper themes, colour scales, and labels, `ggplotly()` preserves all of it while adding the full plotly toolbar. The trade-off: some advanced ggplot2 features may not translate perfectly. For standard scatter and bar charts, the conversion is reliable and fast.
 :::
 
-## Coordinated Multiple Views with plotly {#sec-plotly-coordinated}
+---
 
-Creating coordinated linked plots with plotly involves three steps:
+### Coordinated Multiple Views with plotly {#plotly-coordinated}
 
-1. `highlight_key()` wraps the shared data object
-2. Two scatter plots are built using ggplot2 functions on that shared data
-3. `subplot()` places them side by side; clicking a point in one selects the corresponding point in the other
+The creation of a coordinated linked plot by using plotly involves three steps:
+
+- `highlight_key()` of **plotly** package is used as shared data
+- Two scatter plots are created by using ggplot2 functions
+- `subplot()` of **plotly** package is used to place them side by side
 
 ::: {.panel-tabset}
 
@@ -803,22 +904,20 @@ Creating coordinated linked plots with plotly involves three steps:
 #| code-fold: false
 #| echo: false
 
-latest_coord <- pop_data %>% filter(Year == max(Year, na.rm = TRUE))
+latest_sub <- pop_data %>% filter(Year == max(Year, na.rm = TRUE))
 
-d <- highlight_key(latest_coord)
+d <- highlight_key(latest_sub)
 
-p1 <- ggplot(data = d, aes(x = Young, y = Old)) +
-  geom_point(size = 2, alpha = 0.7, color = "#831843") +
-  coord_cartesian(xlim = c(0, max(latest_coord$Young, na.rm = TRUE) * 1.05),
-                  ylim = c(0, max(latest_coord$Old,   na.rm = TRUE) * 1.05)) +
-  labs(title = "Young vs Old", x = "Young Population", y = "Old Population") +
+p1 <- ggplot(data = d, aes(x = Old, y = Young)) +
+  geom_point(size = 2, alpha = 0.7, colour = "#831843") +
+  labs(title = "% Aged vs % Young",
+       x = "% Aged", y = "% Young") +
   theme_minimal()
 
-p2 <- ggplot(data = d, aes(x = Young, y = Population)) +
-  geom_point(size = 2, alpha = 0.7, color = "#1e40af") +
-  coord_cartesian(xlim = c(0, max(latest_coord$Young,      na.rm = TRUE) * 1.05),
-                  ylim = c(0, max(latest_coord$Population,  na.rm = TRUE) * 1.05)) +
-  labs(title = "Young vs Total Population", x = "Young Population", y = "Total Population") +
+p2 <- ggplot(data = d, aes(x = Old, y = Population / 1e6)) +
+  geom_point(size = 2, alpha = 0.7, colour = "#1e40af") +
+  labs(title = "% Aged vs Population (M)",
+       x = "% Aged", y = "Population (Millions)") +
   theme_minimal()
 
 subplot(ggplotly(p1), ggplotly(p2))
@@ -829,22 +928,20 @@ subplot(ggplotly(p1), ggplotly(p2))
 ```{r}
 #| eval: false
 
-latest_coord <- pop_data %>% filter(Year == max(Year, na.rm = TRUE))
+latest_sub <- pop_data %>% filter(Year == max(Year, na.rm = TRUE))
 
-d <- highlight_key(latest_coord)
+d <- highlight_key(latest_sub)
 
-p1 <- ggplot(data = d, aes(x = Young, y = Old)) +
-  geom_point(size = 2, alpha = 0.7, color = "#831843") +
-  coord_cartesian(xlim = c(0, max(latest_coord$Young, na.rm = TRUE) * 1.05),
-                  ylim = c(0, max(latest_coord$Old,   na.rm = TRUE) * 1.05)) +
-  labs(title = "Young vs Old", x = "Young Population", y = "Old Population") +
+p1 <- ggplot(data = d, aes(x = Old, y = Young)) +
+  geom_point(size = 2, alpha = 0.7, colour = "#831843") +
+  labs(title = "% Aged vs % Young",
+       x = "% Aged", y = "% Young") +
   theme_minimal()
 
-p2 <- ggplot(data = d, aes(x = Young, y = Population)) +
-  geom_point(size = 2, alpha = 0.7, color = "#1e40af") +
-  coord_cartesian(xlim = c(0, max(latest_coord$Young,      na.rm = TRUE) * 1.05),
-                  ylim = c(0, max(latest_coord$Population,  na.rm = TRUE) * 1.05)) +
-  labs(title = "Young vs Total Population", x = "Young Population", y = "Total Population") +
+p2 <- ggplot(data = d, aes(x = Old, y = Population / 1e6)) +
+  geom_point(size = 2, alpha = 0.7, colour = "#1e40af") +
+  labs(title = "% Aged vs Population (M)",
+       x = "% Aged", y = "Population (Millions)") +
   theme_minimal()
 
 subplot(ggplotly(p1), ggplotly(p2))
@@ -852,46 +949,47 @@ subplot(ggplotly(p1), ggplotly(p2))
 
 :::
 
-Click on a data point in one scatter plot and see how the corresponding point in the other scatter plot is selected.
+Click on a data point of one scatter plot and see how the corresponding point on the other is selected.
 
-Key things to learn:
-
-- `highlight_key()` creates an object of class `crosstalk::SharedData` — both plots reference the same shared data object, which enables the selection to propagate across panels.
-- `subplot()` places plotly charts side by side and maintains the shared data linkage.
-- Visit the [crosstalk documentation](https://rstudio.github.io/crosstalk/) to learn more.
+- `highlight_key()` simply creates an object of class `crosstalk::SharedData`. Visit this [link](https://rstudio.github.io/crosstalk/) to learn more about crosstalk.
+- `subplot()` places plotly charts side by side while maintaining the shared data linkage.
 
 ::: {.callout-note}
 ## What I Learned
-`highlight_key()` is the glue between the two plots — it wraps a data frame with a crosstalk SharedData object so plotly knows which rows correspond across charts. Without it, `subplot()` would show two independent charts. The pattern is: shared data → two ggplots → two ggplotly calls → one `subplot()`.
+`highlight_key()` is the glue between panels — it wraps a data frame with a SharedData object so plotly knows which rows correspond across charts. Without it, `subplot()` produces two fully independent charts. The pattern is always: shared data → two ggplots → two `ggplotly()` calls → one `subplot()`. This lets viewers ask multi-variable questions — "Is this highly-aged country also unusually large in population?" — answered with a single click.
 :::
 
 ---
 
-# crosstalk Methods
+## Interactive Data Visualisation — crosstalk Methods {#crosstalk-methods}
 
 ::: {.callout-tip}
 ## Core Concept
-[crosstalk](https://rstudio.github.io/crosstalk/index.html) extends htmlwidgets with cross-widget interactions — specifically **linked brushing** (selection propagates across widgets) and **filtering** (one widget filters another). It currently works with plotly, DT, and leaflet.
+[crosstalk](https://rstudio.github.io/crosstalk/index.html) is an add-on to the htmlwidgets package. It extends htmlwidgets with a set of classes, functions, and conventions for implementing cross-widget interactions — currently **linked brushing** and **filtering**. It works with plotly, DT, and leaflet.
 :::
 
-## Interactive Data Table: DT Package {#sec-dt}
+### Interactive Data Table: DT Package {#dt-table}
 
-The **DT** package wraps the JavaScript DataTables library. R data frames rendered with `DT::datatable()` become searchable, sortable, and paginated HTML tables:
+The **DT** package is a wrapper of the JavaScript library DataTables. Data objects in R can be rendered as HTML tables using the JavaScript library DataTables (typically via R Markdown or Shiny):
 
 ```{r}
-DT::datatable(pop_data, class = "compact")
+#| label: dt-table
+DT::datatable(
+  pop_data %>% filter(Year == max(Year, na.rm = TRUE)),
+  class   = "compact",
+  caption = paste("GlobalPopulation data — Year", max(pop_data$Year, na.rm = TRUE)),
+  options = list(pageLength = 10, scrollX = TRUE)
+)
 ```
-
-The resulting table supports column sorting (click headers), global search (top-right box), and pagination. `class = "compact"` reduces row padding for denser display. No JavaScript knowledge is required.
 
 ::: {.callout-note}
 ## What I Learned
-`DT::datatable()` is the fastest way to make any R data frame explorable in an HTML report. The search box alone — filtering 322+ rows in real time — replaces multiple manual `filter()` calls. Tables and charts are **complementary**: charts show patterns, tables expose individual values.
+`DT::datatable()` is the fastest way to make any R data frame explorable in an HTML report. The search box — filtering hundreds of rows in real time — replaces multiple manual `filter()` calls. Tables and charts are **complementary**: charts show population-level patterns (clusters, trends), tables expose individual country-level values. This complementarity is exactly what linked brushing below exploits.
 :::
 
-## Linked Brushing: crosstalk Method {#sec-crosstalk-brushing}
+---
 
-Linked brushing connects a scatter plot and a data table so that selecting points in the plot filters the table rows, and vice versa:
+### Linked Brushing: crosstalk Method {#crosstalk-brushing}
 
 ::: {.panel-tabset}
 
@@ -905,19 +1003,19 @@ latest_brush <- pop_data %>% filter(Year == max(Year, na.rm = TRUE))
 
 d <- highlight_key(latest_brush)
 
-p <- ggplot(d, aes(Young, Old, color = Continent)) +
-  geom_point(size = 2, alpha = 0.7) +
-  scale_color_viridis_d(option = "plasma") +
-  coord_cartesian(xlim = c(0, max(latest_brush$Young, na.rm = TRUE) * 1.05),
-                  ylim = c(0, max(latest_brush$Old,   na.rm = TRUE) * 1.05)) +
-  labs(x = "Young Population", y = "Old Population") +
+p <- ggplot(d, aes(Old, Young, colour = Continent)) +
+  geom_point(size = 2.5, alpha = 0.7) +
+  scale_colour_viridis_d(option = "plasma") +
+  labs(x = "% Aged", y = "% Young") +
   theme_minimal()
 
 gg <- highlight(ggplotly(p), "plotly_selected")
 
-crosstalk::bscols(gg,
-                  DT::datatable(d),
-                  widths = 5)
+crosstalk::bscols(
+  gg,
+  DT::datatable(d, options = list(pageLength = 8, scrollX = TRUE)),
+  widths = 5
+)
 ```
 
 ### The Code Chunk
@@ -929,35 +1027,105 @@ latest_brush <- pop_data %>% filter(Year == max(Year, na.rm = TRUE))
 
 d <- highlight_key(latest_brush)
 
-p <- ggplot(d, aes(Young, Old, color = Continent)) +
-  geom_point(size = 2, alpha = 0.7) +
-  scale_color_viridis_d(option = "plasma") +
-  coord_cartesian(xlim = c(0, max(latest_brush$Young, na.rm = TRUE) * 1.05),
-                  ylim = c(0, max(latest_brush$Old,   na.rm = TRUE) * 1.05)) +
-  labs(x = "Young Population", y = "Old Population") +
+p <- ggplot(d, aes(Old, Young, colour = Continent)) +
+  geom_point(size = 2.5, alpha = 0.7) +
+  scale_colour_viridis_d(option = "plasma") +
+  labs(x = "% Aged", y = "% Young") +
   theme_minimal()
 
 gg <- highlight(ggplotly(p), "plotly_selected")
 
-crosstalk::bscols(gg,
-                  DT::datatable(d),
-                  widths = 5)
+crosstalk::bscols(
+  gg,
+  DT::datatable(d, options = list(pageLength = 8, scrollX = TRUE)),
+  widths = 5
+)
 ```
 
 :::
 
-Click and drag to select points in the scatter plot — the table on the right will filter to show only those rows. Things to learn from the code:
+Click and drag to select points in the scatter plot — the table on the right filters to show only those rows.
 
-- `highlight()` is a **plotly** function that sets brushing options for linked selection. `"plotly_selected"` specifies that selection is triggered by a drag-select (lasso or box) in plotly.
-- `bscols()` is a **crosstalk** helper function that places HTML elements side by side using Bootstrap columns. It is designed for R Markdown and Quarto documents. Note: this brings in Bootstrap CSS.
-- The `widths = 5` argument allocates 5/12 Bootstrap columns to each widget (plotly + DT), leaving 2 columns as margin.
+Things to learn from the code:
+
+- `highlight()` is a **plotly** function that sets brushing options. `"plotly_selected"` specifies that selection is triggered by drag-select (lasso or box). These options are designed for linking multiple plotly graphs and may not behave as expected when linking to another htmlwidget via crosstalk.
+- `bscols()` is a **crosstalk** helper function that places HTML elements side by side using Bootstrap columns. It is designed for R Markdown / Quarto documents. **Warning:** This will bring in all of Bootstrap!
+- `widths = 5` allocates 5/12 Bootstrap columns to each widget (plotly + DT), leaving 2 as margin.
 
 ::: {.callout-important}
 ## What I Learned
-Linked brushing with crosstalk combines two mental models: plotly handles the selection event (`plotly_selected`), `highlight_key()` propagates the selection to all widgets sharing the same SharedData object, and DT reacts by filtering its rows. The result is a powerful explore-and-drill-down workflow: spot a cluster in the chart, drag to select it, read the exact country names and values in the table — all without writing any JavaScript.
+Linked brushing with crosstalk combines three layers: plotly handles the *selection event* (`plotly_selected`), `highlight_key()` propagates the selection to all widgets sharing the same SharedData object, and DT reacts by filtering its rows. The result is a powerful *explore-and-drill-down* workflow: spot a demographic cluster in the chart (e.g., a group of highly-aged, low-young countries), drag to select it, and immediately read their exact country names and population figures in the table — all without a single line of JavaScript.
+
+This is the highest-level interactivity achievable in a static Quarto HTML document without Shiny — and for many analytical tasks, it is sufficient.
 :::
 
 ---
+
+## Comparison: ggiraph vs plotly vs crosstalk {#comparison}
+
+::: {.panel-tabset}
+
+### ggiraph
+
+**Best for:**
+
+- Embedding interactive SVG charts in standalone HTML reports
+- Group-level hover highlighting via `data_id`
+- Coordinated multiple views within a single `girafe()` call
+- Full ggplot2 theme, scale and geom compatibility
+- Offline use (no external JS CDN required)
+
+**Key functions:** `geom_*_interactive()`, `girafe()`, `opts_tooltip()`, `opts_hover()`, `opts_hover_inv()`
+
+### plotly
+
+**Best for:**
+
+- Richer built-in toolbar (zoom, pan, box/lasso select, download PNG)
+- Interactive legends with click-to-toggle trace visibility
+- Coordinated views via `highlight_key()` + `subplot()`
+- Animation support (see Exercise 3b)
+- Web dashboards and Shiny integration
+
+**Key functions:** `plot_ly()`, `ggplotly()`, `highlight_key()`, `highlight()`, `subplot()`
+
+### crosstalk
+
+**Best for:**
+
+- Linking a chart to a sortable, searchable data table (DT)
+- Drill-down exploration: select visual cluster → read exact values
+- No Shiny server required — works in any HTML document
+
+**Key functions:** `highlight_key()`, `highlight()`, `bscols()`
+
+### Decision Guide
+
+| Criterion | ggiraph | plotly | crosstalk |
+|-----------|---------|--------|-----------|
+| Output format | SVG (inline HTML) | JS canvas | HTML layout |
+| Tooltip customisation | Full CSS | Layout via `text =` | Via plotly |
+| Group hover highlight | ✅ `data_id` | Legend toggle | ✅ via SharedData |
+| Linked chart + table | ❌ | ❌ alone | ✅ DT |
+| Animation support | ❌ | ✅ `frame =` | ❌ |
+| Shiny integration | Partial | Full | Partial |
+| Ease for ggplot users | ✅ drop-in | Medium | Medium |
+
+:::
+
+::: {.callout-note}
+## Overall What I Learned
+The key insight is that interactivity is not decoration — it is a **layer of analysis** that static charts cannot provide.
+
+- **ggiraph** is the most natural upgrade for ggplot2 users: swap `geom_*` → `geom_*_interactive`, add `tooltip`/`data_id`, wrap in `girafe()`. It is ideal when the goal is group-level highlighting across coordinated views within a report.
+- **plotly** excels when you need a richer toolbar or plan to extend to animations. `ggplotly()` bridges the ggplot2 workflow with minimal friction.
+- **crosstalk** enables the most powerful analytical workflow in a static document: drag-select a visual cluster, instantly read its members in a table — simulating a database query without any server code.
+
+Choosing between them is a question of audience and context: ggiraph for polished reports, plotly for dashboards, crosstalk for exploratory analysis handoffs.
+:::
+
+---
+
 
 # References
 

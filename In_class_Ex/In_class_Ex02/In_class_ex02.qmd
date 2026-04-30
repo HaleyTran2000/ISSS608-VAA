@@ -1,6 +1,6 @@
 ---
-title: "In-class Exercise"
-subtitle: "Analysing Superstore Dataset — Interactive EDA"
+title: "In-class Exercise 2"
+subtitle: "Analysing Superstore Dataset"
 author: "Thi Thanh Van Tran"
 date: "April 18, 2026"
 date-modified: "last-modified"
@@ -30,6 +30,19 @@ execute:
     fig.align: "center"
     dpi: 120 
 ---
+
+# Tableau Dashboard
+
+```{=html}
+<div style="width: 100%; height: 400px;">
+  <iframe
+    src="https://public.tableau.com/views/in-class_Ex02_17771009333620/Dashboard1?:showVizHome=no&:embed=true"
+    style="width: 100%; height: 100%; border: none;"
+    loading="lazy"
+    allowfullscreen>
+  </iframe>
+</div>
+```
 
 # Getting Started
 
@@ -71,28 +84,7 @@ The dataset is loaded from an Excel file using `read_excel()` from the **readxl*
 
 ```{r}
 #| code-fold: false
-
 superstore <- read_excel("data/Superstore.xls")
-
-# Add derived time variables for temporal analysis
-superstore <- superstore %>%
-  mutate(
-    Year      = year(`Order Date`),
-    Month     = month(`Order Date`, label = TRUE, abbr = TRUE),
-    YearMonth = floor_date(`Order Date`, "month"),
-    Quarter   = paste0("Q", quarter(`Order Date`)),
-    ShipDays  = as.numeric(difftime(`Ship Date`, `Order Date`, units = "days"))
-  )
-
-cat(sprintf("✅ Dataset loaded: %d rows × %d columns\n",
-            nrow(superstore), ncol(superstore) - 5))
-cat(sprintf("📅 Date range: %s  →  %s\n",
-            format(min(superstore$`Order Date`), "%d %b %Y"),
-            format(max(superstore$`Order Date`), "%d %b %Y")))
-cat(sprintf("🗂  Categories: %s\n",
-            paste(unique(superstore$Category), collapse = " | ")))
-cat(sprintf("🌍  Regions: %s\n",
-            paste(unique(superstore$Region), collapse = " | ")))
 ```
 
 ---
@@ -101,7 +93,7 @@ cat(sprintf("🌍  Regions: %s\n",
 
 ::: {.panel-tabset}
 
-## 🏗️ Variable Structure
+##  Variable Structure
 
 ```{r}
 #| fig-height: 7
@@ -186,7 +178,7 @@ DT::datatable(
 )
 ```
 
-## 🔍 Missing Values
+## Missing Values
 
 ```{r}
 #| fig-height: 6
@@ -236,7 +228,7 @@ print(p_miss)
 **Observation:** `r if(n_missing == 0) "The dataset is perfectly complete — zero missing values detected across all 21 original variables." else paste0("⚠️ ", n_missing, " variable(s) contain missing values that need attention before modelling.")`
 :::
 
-## 📊 Key Distributions
+## Key Distributions
 
 ```{r}
 #| fig-height: 12
@@ -1330,7 +1322,7 @@ subplot(fig_cat, fig_reg, fig_seg, nrows = 1,
 ```
 
 ::: {.callout-note appearance="default" icon="true"}
-## 📋 Business Recommendations
+## Business Recommendations
 
 **1. Discount Strategy Reform**
 
