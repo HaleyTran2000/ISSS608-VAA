@@ -25,18 +25,63 @@ p, li, td, th, span, label, div {
   box-shadow: 0 2px 6px rgba(200, 100, 130, 0.10);
 }
 
-.navbar-default .navbar-brand,
-.navbar-default .navbar-nav > li > a {
-  color: #7a2840 !important;
+/* ── Brand / site title ── */
+.navbar .navbar-brand,
+.navbar-brand {
+  color: #3d1a28 !important;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.navbar-brand:hover,
+.navbar-brand:focus {
+  color: #1a0010 !important;
+}
+
+/* ── All nav links (Bootstrap 5 / Quarto) ── */
+.navbar .nav-link,
+.navbar .navbar-nav .nav-link,
+.navbar-nav > li > .nav-link {
+  color: #3d1a28 !important;
   font-size: 0.76rem;
   font-weight: 500;
   transition: all 0.3s ease;
 }
 
-.navbar-default .navbar-nav > li > a:hover,
-.navbar-default .navbar-nav > li > a:focus {
-  color: #5a1030 !important;
-  background-color: rgba(240, 173, 196, 0.3) !important;
+.navbar .nav-link:hover,
+.navbar .nav-link:focus,
+.navbar-nav > li > .nav-link:hover,
+.navbar-nav > li > .nav-link:focus {
+  color: #1a0010 !important;
+  background-color: rgba(240, 173, 196, 0.35) !important;
+  border-radius: 5px;
+}
+
+/* ── Dropdown menu items ── */
+.navbar .dropdown-menu .dropdown-item {
+  color: #3d1a28 !important;
+  font-size: 0.75rem;
+}
+
+.navbar .dropdown-menu .dropdown-item:hover,
+.navbar .dropdown-menu .dropdown-item:focus {
+  background-color: #fde8f0 !important;
+  color: #1a0010 !important;
+}
+
+/* ── Dropdown toggle caret ── */
+.navbar .dropdown-toggle::after {
+  border-top-color: #3d1a28;
+}
+
+/* ── Icon links (LinkedIn, GitHub, search) ── */
+.navbar .quarto-navbar-tools .nav-link,
+.navbar .quarto-navbar-tools a {
+  color: #3d1a28 !important;
+}
+
+.navbar .quarto-navbar-tools a:hover {
+  color: #1a0010 !important;
 }
 
 /* ===================================
@@ -252,16 +297,18 @@ h4, h5, h6 {
   border-top: 1px solid #f0d0dc;
 }
 
+/* FIX: was #a0304e (pink) — unreadable on #fef0f5 light-pink bg */
 .card-footer .author {
   font-weight: 600;
-  color: #a0304e;
+  color: #1a1a1a;
   text-transform: uppercase;
   letter-spacing: 0.4px;
   font-size: 0.68rem;
 }
 
+/* FIX: was #9a7a84 (muted pink-grey) — low contrast on #fef0f5 light-pink bg */
 .card-footer .date {
-  color: #9a7a84;
+  color: #333333;
   font-weight: 500;
   font-size: 0.68rem;
 }
@@ -309,10 +356,11 @@ a:hover {
   line-height: 1.5;
 }
 
+/* FIX: was #8a2040 (dark pink) — low contrast on #fde8f0 light-pink hover bg */
 #TOC a:hover {
   background: #fde8f0;
   padding-left: 1rem;
-  color: #8a2040;
+  color: #1a1a1a;
 }
 
 /* Active TOC item — soft pastel, not loud */
@@ -390,13 +438,14 @@ a:hover {
    BLOCKQUOTE JUDGMENTS
    =================================== */
 
+/* FIX: was #5a2038 (dark pink) — low contrast on #fff8fb very-light-pink bg */
 blockquote {
   border-left: 3px solid #f0adc4;
   background: #fff8fb;
   padding: 0.4rem 0.8rem;
   border-radius: 0 5px 5px 0;
   font-size: 0.75rem;
-  color: #5a2038;
+  color: #1a1a1a;
   margin: 0.8rem 0;
 }
 
@@ -417,9 +466,10 @@ pre {
   overflow-x: auto;
 }
 
+/* FIX: was #8a2040 (dark pink) — low contrast on #fff0f5 very-light-pink bg */
 code {
   padding: 0.1rem 0.3rem;
-  color: #8a2040;
+  color: #1a1a1a;
 }
 
 details summary {
@@ -444,9 +494,10 @@ table {
   margin: 1rem 0;
 }
 
+/* FIX: was #5a2038 (dark pink) — low contrast on #fce8f0 light-pink header bg */
 thead tr {
   background-color: #fce8f0;
-  color: #5a2038;
+  color: #1a1a1a;
 }
 
 th, td {

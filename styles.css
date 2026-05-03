@@ -252,16 +252,18 @@ h4, h5, h6 {
   border-top: 1px solid #f0d0dc;
 }
 
+/* FIX: was #a0304e (pink) — unreadable on #fef0f5 light-pink bg */
 .card-footer .author {
   font-weight: 600;
-  color: #a0304e;
+  color: #1a1a1a;
   text-transform: uppercase;
   letter-spacing: 0.4px;
   font-size: 0.68rem;
 }
 
+/* FIX: was #9a7a84 (muted pink-grey) — low contrast on #fef0f5 light-pink bg */
 .card-footer .date {
-  color: #9a7a84;
+  color: #333333;
   font-weight: 500;
   font-size: 0.68rem;
 }
@@ -309,10 +311,11 @@ a:hover {
   line-height: 1.5;
 }
 
+/* FIX: was #8a2040 (dark pink) — low contrast on #fde8f0 light-pink hover bg */
 #TOC a:hover {
   background: #fde8f0;
   padding-left: 1rem;
-  color: #8a2040;
+  color: #1a1a1a;
 }
 
 /* Active TOC item — soft pastel, not loud */
@@ -390,13 +393,14 @@ a:hover {
    BLOCKQUOTE JUDGMENTS
    =================================== */
 
+/* FIX: was #5a2038 (dark pink) — low contrast on #fff8fb very-light-pink bg */
 blockquote {
   border-left: 3px solid #f0adc4;
   background: #fff8fb;
   padding: 0.4rem 0.8rem;
   border-radius: 0 5px 5px 0;
   font-size: 0.75rem;
-  color: #5a2038;
+  color: #1a1a1a;
   margin: 0.8rem 0;
 }
 
@@ -417,9 +421,10 @@ pre {
   overflow-x: auto;
 }
 
+/* FIX: was #8a2040 (dark pink) — low contrast on #fff0f5 very-light-pink bg */
 code {
   padding: 0.1rem 0.3rem;
-  color: #8a2040;
+  color: #1a1a1a;
 }
 
 details summary {
@@ -444,9 +449,10 @@ table {
   margin: 1rem 0;
 }
 
+/* FIX: was #5a2038 (dark pink) — low contrast on #fce8f0 light-pink header bg */
 thead tr {
   background-color: #fce8f0;
-  color: #5a2038;
+  color: #1a1a1a;
 }
 
 th, td {

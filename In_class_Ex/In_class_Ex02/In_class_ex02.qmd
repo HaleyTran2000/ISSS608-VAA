@@ -7,44 +7,74 @@ date-modified: "April 18, 2026"
 format:
   html:
     toc: true
-    toc-depth: 3
-    toc-float: true
     number-sections: true
-    number-depth: 3
+    number-depth: 4
     code-fold: true
-    code-summary: "Show Code"
-    code-tools: true
+    code-summary: "Show code"
+    code-tools: false
     code-copy: true
-    theme: flatly
-    highlight-style: github
-    fig-align: center
+    css: styles.css
+    include-after-body: toc-tracker.html
+    theme: cosmo
+    page-layout: article
 execute:
   eval: true
   echo: true
   warning: false
-  message: false
   freeze: false
-  fig-width: 10
-  fig-height: 5
+knitr:
+  opts_chunk:
+    out.width: "100%"
+    fig.width: 10
+    fig.align: "center"
+    dpi: 120
 ---
 
-```{css, echo=FALSE}
-img, .plotly, iframe { max-width: 100% !important; height: auto !important; }
-.figure { margin-bottom: 1rem; }
-.callout { margin-top: 0.75rem; }
+```{=html}
+<style>
+  /* ── Override styles.css 90% figure constraint: always full-width, never clipped ── */
+  .quarto-figure,
+  figure {
+    max-width: 100% !important;
+    width:     100% !important;
+    margin: 0.5rem auto !important;
+    overflow: visible !important;
+  }
+  img.figure-img,
+  .cell > img,
+  .cell-output > img,
+  .cell-output-display img {
+    width:      100% !important;
+    height:     auto !important;
+    object-fit: contain !important;
+    display:    block;
+    margin:     0.3rem auto;
+  }
+  .cell-output-display {
+    margin:   0.4rem 0 !important;
+    padding:  0 !important;
+    overflow: visible !important;
+  }
+  iframe   { max-width: 100% !important; }
+  .callout { margin-top: 0.75rem; }
+  h2       { margin-top: 2rem; }
+</style>
 ```
 
 # Tableau Dashboard
 
 ```{=html}
-<iframe
-  src="https://public.tableau.com/views/in-class3b/Sheet2?:showVizHome=no&:embed=true&:toolbar=yes"
-  style="width:100%; height:620px; border:none;"
-  allowfullscreen>
-</iframe>
+<div style="width:100%; height:620px; margin-bottom:1.5rem;">
+  <iframe
+    src="https://public.tableau.com/views/in-class3b/Sheet2?:showVizHome=no&:embed=true&:toolbar=yes"
+    style="width:100%; height:100%; border:none;"
+    loading="lazy"
+    allowfullscreen>
+  </iframe>
+</div>
 ```
 
----
+------------------------------------------------------------------------
 
 # Getting Started
 
@@ -79,15 +109,15 @@ superstore <- read_excel("data/Superstore.xls") %>%
   )
 ```
 
----
+------------------------------------------------------------------------
 
 # Data Overview
 
-::: {.panel-tabset}
-
+:::: panel-tabset
 ## Variable Structure
 
 ```{r}
+#| fig-width: 11
 #| fig-height: 5
 original_cols <- superstore
 
@@ -150,11 +180,11 @@ DT::datatable(
 
 ## Key Distributions
 
-::: {.panel-tabset}
-
+::: panel-tabset
 ### Sales & Profit
 
 ```{r}
+#| fig-width: 10
 #| fig-height: 4
 prof_mean   <- mean(superstore$Profit)
 prof_median <- median(superstore$Profit)
@@ -190,6 +220,7 @@ p_sales | p_profit
 ### Discount & Quantity
 
 ```{r}
+#| fig-width: 10
 #| fig-height: 4
 p_disc <- ggplot(superstore, aes(x = Discount)) +
   geom_histogram(aes(y = after_stat(density)), bins = 30,
@@ -217,6 +248,7 @@ p_disc | p_qty
 ### Profit by Category
 
 ```{r}
+#| fig-width: 10
 #| fig-height: 4
 ggplot(superstore, aes(x = Profit, y = Category, fill = Category)) +
   geom_density_ridges(alpha = 0.75, scale = 1.1,
@@ -230,24 +262,22 @@ ggplot(superstore, aes(x = Profit, y = Category, fill = Category)) +
   theme_minimal(base_size = 11) +
   theme(plot.title = element_text(face = "bold"), legend.position = "none")
 ```
-
 :::
 
-**Key observations:** Sales is right-skewed ($10–$1,000 dominates). Profit centres near zero with many losses. Discounts cluster at structured tiers. Furniture shows the most loss-making transactions.
+**Key observations:** Sales is right-skewed (\$10–\$1,000 dominates). Profit centres near zero with many losses. Discounts cluster at structured tiers. Furniture shows the most loss-making transactions.
+::::
 
-:::
-
----
+------------------------------------------------------------------------
 
 # Profitability Analysis
 
 ## By Category
 
-::: {.panel-tabset}
-
+::: panel-tabset
 ### Distribution & Totals
 
 ```{r}
+#| fig-width: 10
 #| fig-height: 5
 category_metrics <- superstore %>%
   group_by(Category) %>%
@@ -298,7 +328,8 @@ p_cat_box | p_cat_total
 ### Margin vs % Profitable
 
 ```{r}
-#| fig-height: 4
+#| fig-width: 10
+#| fig-height: 5
 ggplot(category_metrics,
        aes(x = Profit_Margin, y = Pct_Profitable,
            color = Category, size = Total_Sales, label = Category)) +
@@ -314,31 +345,30 @@ ggplot(category_metrics,
   theme_minimal(base_size = 11) +
   theme(plot.title = element_text(face = "bold"), legend.position = "none")
 ```
-
 :::
 
 ::: callout-tip
 **Findings:**
+
 ```{r}
 #| echo: false
 best_cat    <- category_metrics$Category[1]
 best_total  <- dollar(category_metrics$Total_Profit[1])
 best_margin <- paste0(round(category_metrics$Profit_Margin[1], 1), "%")
 ```
-- **`r best_cat`** leads with **`r best_total`** total profit and a **`r best_margin`** margin.
-- **Furniture** has the lowest share of profitable transactions — systemic pricing problem.
+
+-   **`r best_cat`** leads with **`r best_total`** total profit and a **`r best_margin`** margin.
+-   **Furniture** has the lowest share of profitable transactions — systemic pricing problem.
 :::
 
 ## By Sub-Category
 
-::: {.panel-tabset}
-
+::: panel-tabset
 ### Pareto Chart — Who drives 80% of Profit?
 
 ```{r}
+#| fig-width: 10
 #| fig-height: 5
-
-# Build Pareto for profitable sub-categories only (ranked by contribution)
 subcat_pareto <- superstore %>%
   group_by(`Sub-Category`, Category) %>%
   summarise(Total_Profit = sum(Profit), .groups = "drop") %>%
@@ -352,31 +382,24 @@ subcat_pareto <- superstore %>%
     bar_color     = ifelse(Total_Profit > 0, "#2980b9", "#e74c3c")
   )
 
-# Threshold where cumulative hits 80%
 threshold_rank <- min(subcat_pareto$rank[subcat_pareto$cum_pct >= 80], na.rm = TRUE)
 
 ggplot(subcat_pareto, aes(x = reorder(`Sub-Category`, -rank))) +
-  # Bars
   geom_col(aes(y = Total_Profit / 1000, fill = Profitable),
            width = 0.75, alpha = 0.9) +
-  # Cumulative % line (right axis, scaled to bar height)
-  geom_line(aes(y = cum_pct / 100 * max(Total_Profit / 1000, na.rm = TRUE),
-                group = 1),
+  geom_line(aes(y = cum_pct / 100 * max(Total_Profit / 1000, na.rm = TRUE), group = 1),
             color = "#e67e22", linewidth = 1.6, na.rm = TRUE) +
   geom_point(aes(y = cum_pct / 100 * max(Total_Profit / 1000, na.rm = TRUE)),
              color = "#e67e22", size = 2.5, na.rm = TRUE) +
-  # 80% reference line
   geom_hline(yintercept = 0.8 * max(subcat_pareto$Total_Profit / 1000, na.rm = TRUE),
              linetype = "dashed", color = "#e67e22", linewidth = 0.8, alpha = 0.7) +
   annotate("text",
-           x    = nrow(subcat_pareto) - 0.3,
-           y    = 0.82 * max(subcat_pareto$Total_Profit / 1000, na.rm = TRUE),
-           label = "80% threshold",
-           color = "#e67e22", size = 3.2, fontface = "bold", hjust = 1) +
-  # Colour scale for bars
+           x = nrow(subcat_pareto) - 0.3,
+           y = 0.82 * max(subcat_pareto$Total_Profit / 1000, na.rm = TRUE),
+           label = "80% threshold", color = "#e67e22",
+           size = 3.2, fontface = "bold", hjust = 1) +
   scale_fill_manual(values = c("TRUE" = "#2980b9", "FALSE" = "#e74c3c"),
                     labels  = c("FALSE" = "Loss", "TRUE" = "Profit"), name = NULL) +
-  # Right Y axis label (cumulative %)
   scale_y_continuous(
     name     = "Total Profit (K$)",
     labels   = function(x) paste0("$", round(x, 0), "K"),
@@ -388,21 +411,19 @@ ggplot(subcat_pareto, aes(x = reorder(`Sub-Category`, -rank))) +
   ) +
   labs(title = "Pareto Chart: Sub-Category Profit Contribution",
        subtitle = "Blue bars = profit · Red bars = loss · Orange line = cumulative %",
-       x = "Sub-Category",
-       caption = "Source: Superstore Dataset") +
+       x = "Sub-Category", caption = "Source: Superstore Dataset") +
   theme_minimal(base_size = 11) +
-  theme(
-    plot.title   = element_text(face = "bold", size = 13),
-    axis.text.x  = element_text(angle = 35, hjust = 1, size = 9),
-    axis.title.y.right = element_text(color = "#e67e22"),
-    legend.position = "bottom"
-  )
+  theme(plot.title             = element_text(face = "bold", size = 13),
+        axis.text.x            = element_text(angle = 35, hjust = 1, size = 9),
+        axis.title.y.right     = element_text(color = "#e67e22"),
+        legend.position        = "bottom")
 ```
 
 ### Lollipop — Total Profit Ranking
 
 ```{r}
-#| fig-height: 6
+#| fig-width: 10
+#| fig-height: 7
 subcategory_metrics <- superstore %>%
   group_by(`Sub-Category`, Category) %>%
   summarise(Total_Profit = sum(Profit), Total_Sales = sum(Sales),
@@ -439,6 +460,7 @@ ggplot(subcategory_metrics,
 ### Treemap
 
 ```{r}
+#| fig-width: 10
 #| fig-height: 5
 subcategory_metrics %>%
   mutate(abs_profit = abs(Total_Profit),
@@ -458,11 +480,11 @@ subcategory_metrics %>%
   theme_minimal(base_size = 11) +
   theme(plot.title = element_text(face = "bold"), legend.position = "right")
 ```
-
 :::
 
 ::: callout-warning
 **Critical Finding:**
+
 ```{r}
 #| echo: false
 unprofitable_subs <- subcategory_metrics %>% filter(Total_Profit < 0) %>% arrange(Total_Profit)
@@ -473,21 +495,20 @@ loss_labels <- paste(paste0(unprofitable_subs$`Sub-Category`, " (",
                              dollar(unprofitable_subs$Total_Profit), ")"),
                      collapse = ", ")
 ```
+
 **`r n_loss` sub-categories** generate net losses: `r loss_labels`. The worst is **`r worst_sub`** (–`r worst_loss`).
 :::
 
----
+------------------------------------------------------------------------
 
 # The Discount Problem
 
-::: {.panel-tabset}
-
+::: panel-tabset
 ## Profit by Discount Tier
 
 ```{r}
+#| fig-width: 10
 #| fig-height: 5
-
-# Discretise discount into tiers (mirrors actual data structure)
 discount_data <- superstore %>%
   mutate(
     Profit_Status = ifelse(Profit > 0, "Profitable", "Unprofitable"),
@@ -509,9 +530,9 @@ ggplot(discount_data, aes(x = Discount_Tier, y = Profit, fill = Discount_Tier)) 
   stat_summary(fun = mean, geom = "point", shape = 23, size = 3.5,
                fill = "white", color = "black") +
   geom_hline(yintercept = 0, linetype = "dashed", color = "#e74c3c", linewidth = 1.0) +
-  scale_fill_manual(values = c("0%"    = "#27ae60","1–10%"  = "#82e0aa",
-                               "11–20%" = "#f9e79f","21–30%" = "#f0b27a",
-                               "31–50%" = "#e59866","51–80%" = "#e74c3c")) +
+  scale_fill_manual(values = c("0%"     = "#27ae60", "1–10%"  = "#82e0aa",
+                               "11–20%" = "#f9e79f", "21–30%" = "#f0b27a",
+                               "31–50%" = "#e59866", "51–80%" = "#e74c3c")) +
   scale_y_continuous(labels = dollar_format(), limits = c(-1000, 1500)) +
   labs(title = "Profit Distribution Drops with Every Discount Tier",
        subtitle = "◆ = mean · Red dashed = break-even · Each step higher in discount = more losses",
@@ -523,6 +544,7 @@ ggplot(discount_data, aes(x = Discount_Tier, y = Profit, fill = Discount_Tier)) 
 ## Profitability Rate by Tier
 
 ```{r}
+#| fig-width: 10
 #| fig-height: 4
 disc_bin_summary <- discount_data %>%
   group_by(Discount_Tier, Profit_Status) %>%
@@ -547,10 +569,11 @@ ggplot(disc_bin_summary, aes(x = Discount_Tier, y = Pct, fill = Profit_Status)) 
 ## Heatmap: Category × Discount
 
 ```{r}
+#| fig-width: 10
 #| fig-height: 3.5
 superstore %>%
   mutate(Discount_Tier = case_when(
-    Discount == 0.00 ~ "0%",    Discount <= 0.10 ~ "1–10%",
+    Discount == 0.00 ~ "0%",     Discount <= 0.10 ~ "1–10%",
     Discount <= 0.20 ~ "11–20%", Discount <= 0.30 ~ "21–30%",
     Discount <= 0.50 ~ "31–50%", TRUE             ~ "51–80%"),
     Discount_Tier = factor(Discount_Tier,
@@ -569,11 +592,11 @@ superstore %>%
   theme_minimal(base_size = 12) +
   theme(plot.title = element_text(face = "bold"), panel.grid = element_blank())
 ```
-
 :::
 
 ::: callout-important
 **Key Discount Insights:**
+
 ```{r}
 #| echo: false
 disc_summary <- discount_data %>%
@@ -585,16 +608,18 @@ pct_loss_top <- disc_bin_summary %>%
   filter(Discount_Tier == "51–80%", Profit_Status == "Unprofitable") %>%
   pull(Pct) %>% percent(accuracy = 1)
 ```
-- Profitable orders average **`r avg_p`** discount; unprofitable orders average **`r avg_u`**.
-- At the **51–80%** tier, **`r pct_loss_top`** of transactions are unprofitable.
-- **Recommended action:** Hard cap at 30%; require manager approval above 20%.
+
+-   Profitable orders average **`r avg_p`** discount; unprofitable orders average **`r avg_u`**.
+-   At the **51–80%** tier, **`r pct_loss_top`** of transactions are unprofitable.
+-   **Recommended action:** Hard cap at 30%; require manager approval above 20%.
 :::
 
----
+------------------------------------------------------------------------
 
 # Regional Performance
 
 ```{r}
+#| fig-width: 10
 #| fig-height: 5
 regional_metrics <- superstore %>%
   group_by(Region) %>%
@@ -643,6 +668,7 @@ p_reg_profit | p_reg_bubble
 
 ::: callout-tip
 **Regional Findings:**
+
 ```{r}
 #| echo: false
 best_region        <- regional_metrics$Region[1]
@@ -651,20 +677,22 @@ worst_region       <- regional_metrics$Region[nrow(regional_metrics)]
 best_margin_region <- regional_metrics$Region[which.max(regional_metrics$Profit_Margin)]
 best_margin_pct    <- paste0(round(max(regional_metrics$Profit_Margin), 1), "%")
 ```
-- **`r best_region`** leads total profit (**`r best_region_total`**); **`r best_margin_region`** has the highest margin at **`r best_margin_pct`**.
-- **`r worst_region`** lags both metrics — higher discounts are likely the driver.
+
+-   **`r best_region`** leads total profit (**`r best_region_total`**); **`r best_margin_region`** has the highest margin at **`r best_margin_pct`**.
+-   **`r worst_region`** lags both metrics — higher discounts are likely the driver.
 :::
 
----
+------------------------------------------------------------------------
 
 # Temporal Analysis
 
-::: {.panel-tabset}
-
+::: panel-tabset
 ## Monthly Sales & Profit
 
 ```{r}
-#| fig-height: 5
+#| fig-width: 10
+#| fig-height: 8
+# fig-height 8 = 4" per subplot × 2 stacked (was 5, giving only ~2.5" each)
 monthly_by_cat <- superstore %>%
   group_by(YearMonth, Category) %>%
   summarise(Total_Sales = sum(Sales), Total_Profit = sum(Profit), .groups = "drop")
@@ -697,6 +725,7 @@ p_s / p_p
 ## Profit Margin Trend
 
 ```{r}
+#| fig-width: 10
 #| fig-height: 4
 monthly_overall <- superstore %>%
   group_by(YearMonth) %>%
@@ -722,6 +751,7 @@ ggplot(monthly_overall, aes(x = YearMonth, y = Profit_Margin)) +
 ## Seasonal Heatmap
 
 ```{r}
+#| fig-width: 10
 #| fig-height: 3.5
 superstore %>%
   group_by(Year, Month) %>%
@@ -742,9 +772,8 @@ superstore %>%
 ## Interactive Time Series
 
 ```{r}
+#| fig-width: 10
 #| fig-height: 4
-
-# Build hover text as a plain R character vector — no plotly template tokens
 monthly_hover <- monthly_by_cat %>%
   mutate(hover_label = paste0(
     "<b>", Category, "</b><br>",
@@ -753,8 +782,8 @@ monthly_hover <- monthly_by_cat %>%
   ))
 
 plot_ly(monthly_hover,
-        x    = ~YearMonth,
-        y    = ~Total_Profit,
+        x     = ~YearMonth,
+        y     = ~Total_Profit,
         color = ~Category,
         colors = RColorBrewer::brewer.pal(3, "Set1"),
         type  = "scatter",
@@ -762,7 +791,7 @@ plot_ly(monthly_hover,
         line  = list(width = 2),
         marker = list(size = 4),
         text  = ~hover_label,
-        hoverinfo = "text") %>%           # ← use hoverinfo, not hovertemplate
+        hoverinfo = "text") %>%
   layout(
     title = list(
       text = "<b>Monthly Profit by Category</b><br><sup>Use range buttons or drag slider to zoom · Hover for details</sup>"
@@ -783,11 +812,11 @@ plot_ly(monthly_hover,
     paper_bgcolor = "rgba(0,0,0,0)"
   )
 ```
-
 :::
 
 ::: callout-tip
 **Temporal Findings:**
+
 ```{r}
 #| echo: false
 heatmap_data <- superstore %>%
@@ -798,23 +827,22 @@ best_month  <- heatmap_data %>% group_by(Month) %>%
 worst_month <- heatmap_data %>% group_by(Month) %>%
   summarise(AvgP = mean(Total_Profit)) %>% slice_min(AvgP, n = 1)
 ```
-- **`r best_month$Month`** is consistently the strongest month (avg `r dollar(best_month$AvgP)` profit).
-- **`r worst_month$Month`** is the weakest month on average (`r dollar(worst_month$AvgP)`).
-- The LOESS trend confirms the business is gradually improving its profit margin.
+
+-   **`r best_month$Month`** is consistently the strongest month (avg `r dollar(best_month$AvgP)` profit).
+-   **`r worst_month$Month`** is the weakest month on average (`r dollar(worst_month$AvgP)`).
+-   The LOESS trend confirms the business is gradually improving its profit margin.
 :::
 
----
+------------------------------------------------------------------------
 
 # Customer Segment Analysis
 
-::: {.panel-tabset}
-
+::: panel-tabset
 ## Sales vs Profit Quadrant by State
 
 ```{r}
-#| fig-height: 6
-
-# State-level metrics with percentile ranking (mirrors Tableau Image 5 approach)
+#| fig-width: 10
+#| fig-height: 6.5
 state_metrics <- superstore %>%
   group_by(`State/Province`, Region) %>%
   summarise(
@@ -827,13 +855,11 @@ state_metrics <- superstore %>%
     Profit_Pctile = percent_rank(Total_Profit) * 100
   )
 
-# Quadrant labels
 med_s <- 50; med_p <- 50
 
 ggplot(state_metrics,
        aes(x = Sales_Pctile, y = Profit_Pctile,
            color = Total_Profit, size = Total_Sales)) +
-  # Quadrant shading
   annotate("rect", xmin = med_s, xmax = Inf,  ymin = med_p, ymax = Inf,
            fill = "#27ae60", alpha = 0.06) +
   annotate("rect", xmin = -Inf, xmax = med_s, ymin = -Inf, ymax = med_p,
@@ -842,10 +868,8 @@ ggplot(state_metrics,
            fill = "#e74c3c", alpha = 0.06) +
   annotate("rect", xmin = -Inf, xmax = med_s, ymin = med_p, ymax = Inf,
            fill = "#3498db", alpha = 0.06) +
-  # Quadrant reference lines
   geom_vline(xintercept = med_s, linetype = "dashed", color = "grey50", linewidth = 0.8) +
   geom_hline(yintercept = med_p, linetype = "dashed", color = "grey50", linewidth = 0.8) +
-  # Quadrant labels
   annotate("text", x = 75, y = 97, label = "High Sales\nHigh Profit", fontface = "bold",
            color = "#27ae60", size = 3.2, hjust = 0.5) +
   annotate("text", x = 75, y =  3, label = "High Sales\nLow Profit",  fontface = "bold",
@@ -854,11 +878,9 @@ ggplot(state_metrics,
            color = "#3498db", size = 3.2, hjust = 0.5) +
   annotate("text", x = 10, y =  3, label = "Low Sales\nLow Profit",   fontface = "bold",
            color = "grey50",  size = 3.2, hjust = 0.5) +
-  # Points
   geom_point(alpha = 0.85) +
   geom_text_repel(aes(label = `State/Province`), size = 2.5, max.overlaps = 14,
                   show.legend = FALSE, box.padding = 0.3) +
-  # Colour = profit (orange-to-blue like Tableau), Size = total sales
   scale_color_gradient2(low = "#e67e22", mid = "grey80", high = "#2980b9",
                         midpoint = 0, name = "Total Profit ($)",
                         labels = dollar_format()) +
@@ -878,39 +900,32 @@ ggplot(state_metrics,
 ## Pareto — Which Customers Drive Profit?
 
 ```{r}
+#| fig-width: 10
 #| fig-height: 5
-
-# Customer-level cumulative profit Pareto (mirrors Tableau Image 6)
 customer_pareto <- superstore %>%
   group_by(`Customer ID`, `Customer Name`, Segment) %>%
   summarise(Total_Profit = sum(Profit), .groups = "drop") %>%
   arrange(desc(Total_Profit)) %>%
   mutate(
-    rank       = row_number(),
-    n_total    = n(),
-    cum_profit = cumsum(Total_Profit),
-    total_pos  = sum(pmax(Total_Profit, 0)),
+    rank             = row_number(),
+    n_total          = n(),
+    cum_profit       = cumsum(Total_Profit),
+    total_pos        = sum(pmax(Total_Profit, 0)),
     cum_pct_profit   = cum_profit / sum(Total_Profit) * 100,
     cum_pct_customer = rank / n_total * 100
   )
 
-# Find 80% threshold
-thresh_cust <- customer_pareto %>%
-  filter(cum_pct_profit >= 80) %>% slice(1)
+thresh_cust <- customer_pareto %>% filter(cum_pct_profit >= 80) %>% slice(1)
 
 ggplot(customer_pareto,
        aes(x = cum_pct_customer, y = cum_pct_profit)) +
-  # Shaded area under curve
   geom_area(fill = "#2980b9", alpha = 0.15) +
   geom_line(color = "#2980b9", linewidth = 1.6) +
   geom_point(size = 0.8, color = "#2980b9", alpha = 0.5) +
-  # 80% reference lines
   geom_hline(yintercept = 80, linetype = "dashed", color = "#e67e22", linewidth = 0.9) +
   geom_vline(xintercept = thresh_cust$cum_pct_customer,
              linetype = "dashed", color = "#e67e22", linewidth = 0.9) +
-  # Annotation at threshold
-  annotate("point",
-           x = thresh_cust$cum_pct_customer, y = 80,
+  annotate("point", x = thresh_cust$cum_pct_customer, y = 80,
            shape = 21, size = 5, fill = "white", color = "#e67e22", stroke = 1.5) +
   annotate("label",
            x = thresh_cust$cum_pct_customer + 2, y = 75,
@@ -932,6 +947,7 @@ ggplot(customer_pareto,
 ## Segment Scorecard
 
 ```{r}
+#| fig-width: 10
 #| fig-height: 4
 segment_metrics <- superstore %>%
   group_by(Segment) %>%
@@ -975,11 +991,11 @@ p_seg_pct <- ggplot(segment_metrics,
 
 p_seg_bar | p_seg_pct
 ```
-
 :::
 
 ::: callout-note
 **Segment Insights:**
+
 ```{r}
 #| echo: false
 best_seg_avg   <- segment_metrics$Segment[which.max(segment_metrics$Avg_Profit)]
@@ -987,42 +1003,36 @@ best_avg_val   <- dollar(max(segment_metrics$Avg_Profit), accuracy = 0.01)
 best_seg_total <- segment_metrics$Segment[1]
 best_tot_val   <- dollar(segment_metrics$Total_Profit[1])
 ```
-- **`r best_seg_avg`** achieves the highest avg profit per transaction (**`r best_avg_val`**).
-- **`r best_seg_total`** generates the most total profit (**`r best_tot_val`**) through volume.
+
+-   **`r best_seg_avg`** achieves the highest avg profit per transaction (**`r best_avg_val`**).
+-   **`r best_seg_total`** generates the most total profit (**`r best_tot_val`**) through volume.
 :::
 
----
+------------------------------------------------------------------------
 
 # Key Insights & Recommendations
 
 ## Interactive Profitability Dashboard
 
 ```{r}
+#| fig-width: 10
 #| fig-height: 4
-
-# Pre-build hover strings as plain R character — avoids %{text} rendering bug
 cat_hover <- category_metrics %>%
-  mutate(tip = paste0(
-    "<b>", Category, "</b><br>",
-    "Total Profit: ", dollar(Total_Profit), "<br>",
-    "Margin: ", round(Profit_Margin, 1), "%<br>",
-    "Transactions: ", format(Count, big.mark = ",")
-  ))
+  mutate(tip = paste0("<b>", Category, "</b><br>",
+                      "Total Profit: ", dollar(Total_Profit), "<br>",
+                      "Margin: ", round(Profit_Margin, 1), "%<br>",
+                      "Transactions: ", format(Count, big.mark = ",")))
 
 reg_hover <- regional_metrics %>%
-  mutate(tip = paste0(
-    "<b>", Region, "</b><br>",
-    "Total Profit: ", dollar(Total_Profit), "<br>",
-    "Margin: ", round(Profit_Margin, 1), "%<br>",
-    "Transactions: ", format(Count, big.mark = ",")
-  ))
+  mutate(tip = paste0("<b>", Region, "</b><br>",
+                      "Total Profit: ", dollar(Total_Profit), "<br>",
+                      "Margin: ", round(Profit_Margin, 1), "%<br>",
+                      "Transactions: ", format(Count, big.mark = ",")))
 
 seg_hover <- segment_metrics %>%
-  mutate(tip = paste0(
-    "<b>", Segment, "</b><br>",
-    "Avg Profit: ", dollar(Avg_Profit, accuracy = 0.01), "<br>",
-    "% Profitable: ", round(Pct_Profitable, 1), "%"
-  ))
+  mutate(tip = paste0("<b>", Segment, "</b><br>",
+                      "Avg Profit: ", dollar(Avg_Profit, accuracy = 0.01), "<br>",
+                      "% Profitable: ", round(Pct_Profitable, 1), "%"))
 
 fig_cat <- plot_ly(cat_hover,
   x = ~reorder(Category, Total_Profit), y = ~Total_Profit,
@@ -1122,15 +1132,16 @@ best_seg_rec <- segment_metrics$Segment[which.max(segment_metrics$Avg_Profit)]
 vol_seg_rec  <- segment_metrics$Segment[1]
 ```
 
-**1. Discount Cap at 30%**  
+**1. Discount Cap at 30%**\
 Profitable orders average `r avg_p_rec` discount; unprofitable orders average `r avg_u_rec`. Enforce a hard cap at 30%, require manager approval above 20%.
 
-**2. Product Line Optimisation**  
+**2. Product Line Optimisation**\
 Loss-making sub-categories requiring action: `r paste(loss_sub_labels, collapse = " · ")`. Invest in top performers: **`r paste(top_subs, collapse = "**, **")`**.
 
-**3. Regional Strategy**  
+**3. Regional Strategy**\
 `r best_r_rec` leads — use as the pricing benchmark. `r worst_r_rec` requires root-cause analysis this quarter.
 
-**4. Segment & Customer Development**  
-`r best_seg_rec` earns the highest margin per transaction — grow through premium bundles. The Pareto curve shows a small share of customers generates most profit — priorities retention programmes for that top tier.
+**4. Segment & Customer Development**\
+`r best_seg_rec` earns the highest margin per transaction — grow through premium bundles. The Pareto curve shows a small share of customers generates most profit — prioritise retention programmes for that top tier.
 :::
+
